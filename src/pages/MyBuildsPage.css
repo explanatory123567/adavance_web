@@ -1,0 +1,173 @@
+@media (max-width: 760px) {
+  .my-builds-page .container-wide { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Extracted static inline styles */
+.inline-mybuildspage-0 {
+  padding: 40px 0 80px 0;
+}
+
+.inline-mybuildspage-1 {
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.inline-mybuildspage-2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.inline-mybuildspage-3 {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.inline-mybuildspage-4 {
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.inline-mybuildspage-5 {
+  font-size: 14.5px;
+  color: var(--text-secondary);
+}
+
+.inline-mybuildspage-6 {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.inline-mybuildspage-7 {
+  margin: 0 auto 16px;
+}
+
+.inline-mybuildspage-8 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.inline-mybuildspage-9 {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.inline-mybuildspage-10 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.inline-mybuildspage-11 {
+  height: 200px;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, rgba(8, 12, 24, 0.95) 80%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 16px;
+}
+
+.inline-mybuildspage-12 {
+  max-height: 85%;
+  max-width: 85%;
+  object-fit: contain;
+}
+
+.inline-mybuildspage-13 {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.inline-mybuildspage-14 {
+  font-size: 10.5px;
+}
+
+.inline-mybuildspage-15 {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(8, 12, 24, 0.8);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.inline-mybuildspage-16 {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.inline-mybuildspage-17 {
+  margin-bottom: 10px;
+}
+
+.inline-mybuildspage-18 {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.inline-mybuildspage-19 {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--neon-cyan);
+  font-family: var(--font-heading);
+}
+
+.inline-mybuildspage-20 {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.inline-mybuildspage-21 {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.inline-mybuildspage-22 {
+  color: var(--text-secondary);
+  font-weight: 600;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inline-mybuildspage-23 {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inline-mybuildspage-24 {
+  width: 100%;
+}
+
+.inline-mybuildspage-25 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}

@@ -1,0 +1,230 @@
+@media (max-width: 760px) {
+  .orders-page .container-wide { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Extracted static inline styles */
+.inline-orderspage-0 {
+  padding: 40px 0 80px 0;
+}
+
+.inline-orderspage-1 {
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.inline-orderspage-2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.inline-orderspage-3 {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.inline-orderspage-4 {
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.inline-orderspage-5 {
+  font-size: 14.5px;
+  color: var(--text-secondary);
+}
+
+.inline-orderspage-6 {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  overflow-x: auto;
+}
+
+.inline-orderspage-7 {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.inline-orderspage-8 {
+  margin: 0 auto 16px;
+}
+
+.inline-orderspage-9 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.inline-orderspage-10 {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.inline-orderspage-11 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inline-orderspage-12 {
+  overflow: hidden;
+}
+
+.inline-orderspage-13 {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.inline-orderspage-14 {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.inline-orderspage-15 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.inline-orderspage-16 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--neon-cyan);
+}
+
+.inline-orderspage-17 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.inline-orderspage-18 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.inline-orderspage-19 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.inline-orderspage-20 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  font-family: var(--font-heading);
+}
+
+.inline-orderspage-21 {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.inline-orderspage-22 {
+  gap: 6px;
+}
+
+.inline-orderspage-23 {
+  padding: 24px;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(8, 12, 24, 0.5);
+}
+
+.inline-orderspage-24 {
+  margin-bottom: 28px;
+}
+
+.inline-orderspage-25 {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+
+.inline-orderspage-26 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  position: relative;
+  text-align: center;
+}
+
+.inline-orderspage-27 {
+  position: absolute;
+  top: 14px;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  background: rgba(0, 240, 255, 0.3);
+  z-index: 1;
+}
+
+.inline-orderspage-28 {
+  position: relative;
+  z-index: 2;
+}
+
+.inline-orderspage-29 {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.inline-orderspage-30 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inline-orderspage-31 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.inline-orderspage-32 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inline-orderspage-33 {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.inline-orderspage-34 {
+  font-weight: 700;
+  color: #fff;
+}
+
+.inline-orderspage-35 {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.inline-orderspage-36 {
+  font-weight: 800;
+  color: var(--neon-cyan);
+}

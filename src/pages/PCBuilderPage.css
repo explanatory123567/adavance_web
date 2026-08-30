@@ -1,0 +1,1001 @@
+.pc-builder-page { min-width: 0; }
+.pc-assembly-viewport {
+  position: relative;
+  min-height: 380px;
+}
+.pc-builder-canvas {
+  min-height: 380px;
+  background: radial-gradient(circle at 50% 42%, rgba(15, 45, 67, 0.75), #070a12 72%);
+}
+.pc-assembly-label {
+  color: rgba(226, 247, 255, 0.8);
+  font-family: var(--font-cyber);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  user-select: none;
+}
+@media (max-width: 840px) {
+  .pc-builder-page .container-wide { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Extracted static inline styles */
+.inline-pcbuilderpage-0 {
+  padding: 30px 0 80px 0;
+}
+
+.inline-pcbuilderpage-1 {
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.inline-pcbuilderpage-2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.inline-pcbuilderpage-3 {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.inline-pcbuilderpage-4 {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.inline-pcbuilderpage-5 {
+  display: flex;
+  gap: 10px;
+}
+
+.inline-pcbuilderpage-6 {
+  gap: 6px;
+}
+
+.inline-pcbuilderpage-7 {
+  gap: 6px;
+}
+
+.inline-pcbuilderpage-8 {
+  display: grid;
+  grid-template-columns: 350px 1fr 390px;
+  gap: 24px;
+  align-items: start;
+}
+
+.inline-pcbuilderpage-9 {
+  padding: 20px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+.inline-pcbuilderpage-10 {
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.inline-pcbuilderpage-11 {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.inline-pcbuilderpage-12 {
+  font-size: 10px;
+}
+
+.inline-pcbuilderpage-13 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inline-pcbuilderpage-14 {
+  margin-bottom: 6px;
+}
+
+.inline-pcbuilderpage-15 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.inline-pcbuilderpage-16 {
+  color: var(--text-muted);
+  padding: 2px;
+}
+
+.inline-pcbuilderpage-17 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.inline-pcbuilderpage-18 {
+  margin-top: 6px;
+}
+
+.inline-pcbuilderpage-19 {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+}
+
+.inline-pcbuilderpage-20 {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.inline-pcbuilderpage-21 {
+  width: 100%;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.inline-pcbuilderpage-22 {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inline-pcbuilderpage-23 {
+  padding: 0;
+  overflow: hidden;
+}
+
+.inline-pcbuilderpage-24 {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(10, 14, 26, 0.6);
+}
+
+.inline-pcbuilderpage-25 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-pcbuilderpage-26 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+
+.inline-pcbuilderpage-27 {
+  font-size: 10px;
+}
+
+.inline-pcbuilderpage-28 {
+  height: 380px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #070a12;
+  overflow: hidden;
+}
+
+.inline-pcbuilderpage-29 {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 14, 26, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+}
+
+.inline-pcbuilderpage-30 {
+  width: 26px;
+  height: 26px;
+}
+
+.inline-pcbuilderpage-31 {
+  width: 26px;
+  height: 26px;
+}
+
+.inline-pcbuilderpage-32 {
+  width: 26px;
+  height: 26px;
+}
+
+.inline-pcbuilderpage-33 {
+  width: 26px;
+  height: 26px;
+}
+
+.inline-pcbuilderpage-34 {
+  width: 26px;
+  height: 26px;
+}
+
+.inline-pcbuilderpage-35 {
+  padding: 20px;
+}
+
+.inline-pcbuilderpage-36 {
+  margin-bottom: 12px;
+}
+
+.inline-pcbuilderpage-37 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-pcbuilderpage-38 {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.inline-pcbuilderpage-39 {
+  display: flex;
+  gap: 4px;
+}
+
+.inline-pcbuilderpage-40 {
+  margin-bottom: 10px;
+}
+
+.inline-pcbuilderpage-41 {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.inline-pcbuilderpage-42 {
+  color: var(--text-secondary);
+}
+
+.inline-pcbuilderpage-43 {
+  color: #fff;
+}
+
+.inline-pcbuilderpage-45 {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.inline-pcbuilderpage-46 {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.inline-pcbuilderpage-47 {
+  padding: 20px;
+}
+
+.inline-pcbuilderpage-48 {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-subtle);
+}
+
+.inline-pcbuilderpage-49 {
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.inline-pcbuilderpage-50 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.inline-pcbuilderpage-51 {
+  font-size: 28px;
+  font-weight: 900;
+  font-family: var(--font-heading);
+  color: var(--accent-cyan);
+}
+
+.build-analyzer {
+  display: flex;
+  padding: 4px 0 0;
+}
+
+.build-analyzer__panel {
+  width: 100%;
+  background: rgba(12, 18, 29, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  padding: 16px 16px 14px;
+}
+
+.build-analyzer__section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.build-analyzer__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: rgba(167, 139, 250, 0.12);
+  color: #d8c8ff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.build-analyzer__section-title h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.build-analyzer__content {
+  display: grid;
+  grid-template-columns: 146px 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.build-analyzer__gauge-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.build-analyzer__gauge {
+  --meter: var(--score, 87);
+  position: relative;
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  background: conic-gradient(#4ade80 calc(var(--meter) * 1%), rgba(148, 163, 184, 0.18) 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.build-analyzer__gauge::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: rgba(10, 14, 24, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
+.build-analyzer__gauge-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.build-analyzer__gauge-value {
+  color: #f8fafc;
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 800;
+  font-family: var(--font-heading);
+}
+
+.build-analyzer__gauge-max {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.build-analyzer__summary {
+  padding-left: 4px;
+}
+
+.build-analyzer__summary h4 {
+  margin: 0 0 8px;
+  color: #f8fafc;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+.build-analyzer__summary p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.build-analyzer__list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.build-analyzer__metric {
+  display: grid;
+  grid-template-columns: 120px 1fr 50px;
+  align-items: center;
+  gap: 10px;
+}
+
+.build-analyzer__metric-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.build-analyzer__metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.build-analyzer__metric-bar {
+  height: 8px;
+  background: rgba(148, 163, 184, 0.17);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.build-analyzer__metric-bar span {
+  display: block;
+  height: 100%;
+  min-width: 12%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #cbd5e1, #94a3b8);
+}
+
+.build-analyzer__metric strong {
+  justify-self: end;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.bottleneck-components {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.bottleneck-components__row {
+  display: grid;
+  grid-template-columns: 32px 1fr 38px;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.bottleneck-components__track {
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.bottleneck-components__track > div {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.bottleneck-components__row strong {
+  justify-self: end;
+  color: #e2e8f0;
+  font-size: 11px;
+}
+
+.inline-pcbuilderpage-52 {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.inline-pcbuilderpage-53 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.inline-pcbuilderpage-54 {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.inline-pcbuilderpage-55 {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.inline-pcbuilderpage-56 {
+  margin-bottom: 20px;
+}
+
+.inline-pcbuilderpage-57 {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.inline-pcbuilderpage-58 {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inline-pcbuilderpage-59 {
+  color: #fbbf24;
+}
+
+.inline-pcbuilderpage-60 {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.inline-pcbuilderpage-61 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inline-pcbuilderpage-62 {
+  width: 100%;
+  padding: 12px;
+}
+
+.inline-pcbuilderpage-63 {
+  width: 100%;
+  padding: 10px;
+}
+
+.inline-pcbuilderpage-64 {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-pcbuilderpage-65 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.inline-pcbuilderpage-66 {
+  padding: 10px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 6px;
+}
+
+.inline-pcbuilderpage-67 {
+  margin-bottom: 2px;
+}
+
+.inline-pcbuilderpage-68 {
+  color: var(--text-muted);
+}
+
+.inline-pcbuilderpage-69 {
+  color: var(--accent-cyan);
+}
+
+.inline-pcbuilderpage-70 {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.inline-pcbuilderpage-71 {
+  padding: 10px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 6px;
+}
+
+.inline-pcbuilderpage-72 {
+  margin-bottom: 2px;
+}
+
+.inline-pcbuilderpage-73 {
+  color: var(--text-muted);
+}
+
+.inline-pcbuilderpage-74 {
+  color: var(--accent-cyan);
+}
+
+.inline-pcbuilderpage-75 {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.inline-pcbuilderpage-76 {
+  padding: 10px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 6px;
+}
+
+.inline-pcbuilderpage-77 {
+  margin-bottom: 2px;
+}
+
+.inline-pcbuilderpage-78 {
+  color: var(--text-muted);
+}
+
+.inline-pcbuilderpage-79 {
+  color: #34d399;
+}
+
+.inline-pcbuilderpage-80 {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.inline-pcbuilderpage-81 {
+  padding: 10px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 6px;
+}
+
+.inline-pcbuilderpage-82 {
+  margin-bottom: 2px;
+}
+
+.inline-pcbuilderpage-83 {
+  color: var(--text-muted);
+}
+
+.inline-pcbuilderpage-84 {
+  color: #c4b5fd;
+}
+
+.inline-pcbuilderpage-85 {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.inline-pcbuilderpage-86 {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-pcbuilderpage-87 {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.inline-pcbuilderpage-88 {
+  margin-bottom: 14px;
+}
+
+.inline-pcbuilderpage-89 {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.inline-pcbuilderpage-90 {
+  color: var(--accent-cyan);
+}
+
+.inline-pcbuilderpage-91 {
+  width: 100%;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+
+.inline-pcbuilderpage-92 {
+  margin-bottom: 14px;
+}
+
+.inline-pcbuilderpage-93 {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.inline-pcbuilderpage-94 {
+  color: #c4b5fd;
+}
+
+.inline-pcbuilderpage-95 {
+  width: 100%;
+  accent-color: #8b5cf6;
+  cursor: pointer;
+}
+
+.inline-pcbuilderpage-96 {
+  margin-bottom: 16px;
+}
+
+.inline-pcbuilderpage-97 {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.inline-pcbuilderpage-98 {
+  color: #34d399;
+}
+
+.inline-pcbuilderpage-99 {
+  width: 100%;
+  accent-color: #10b981;
+  cursor: pointer;
+}
+
+.inline-pcbuilderpage-100 {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.02);
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.inline-pcbuilderpage-101 {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-pcbuilderpage-102 {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inline-pcbuilderpage-103 {
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+.inline-pcbuilderpage-104 {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.inline-pcbuilderpage-105 {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.inline-pcbuilderpage-106 {
+  padding: 24px;
+}
+
+.inline-pcbuilderpage-107 {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.inline-pcbuilderpage-108 {
+  margin-bottom: 4px;
+}
+
+.inline-pcbuilderpage-109 {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.inline-pcbuilderpage-110 {
+  max-height: 60vh;
+  overflow-y: auto;
+  gap: 14px;
+}
+
+.inline-pcbuilderpage-111 {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+}
+
+.inline-pcbuilderpage-112 {
+  flex: 1;
+}
+
+.inline-pcbuilderpage-113 {
+  font-size: 10px;
+  color: var(--accent-cyan);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.inline-pcbuilderpage-114 {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.inline-pcbuilderpage-115 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  margin-bottom: 8px;
+}
+
+.inline-pcbuilderpage-117 {
+  padding: 28px;
+  background: #0a0e1a;
+}
+
+.inline-pcbuilderpage-118 {
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.inline-pcbuilderpage-119 {
+  font-size: 12px;
+  color: var(--accent-cyan);
+  font-weight: 800;
+}
+
+.inline-pcbuilderpage-120 {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.inline-pcbuilderpage-121 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+  margin-bottom: 24px;
+}
+
+.inline-pcbuilderpage-122 {
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 6px;
+}
+
+.inline-pcbuilderpage-123 {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 700;
+  width: 120px;
+}
+
+.inline-pcbuilderpage-124 {
+  color: #fff;
+  flex: 1;
+  font-weight: 600;
+}
+
+.inline-pcbuilderpage-125 {
+  color: var(--accent-cyan);
+  font-weight: 800;
+}
+
+.inline-pcbuilderpage-126 {
+  padding: 16px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.inline-pcbuilderpage-127 {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.inline-pcbuilderpage-128 {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--accent-cyan);
+}
+
+.inline-pcbuilderpage-129 {
+  text-align: right;
+}
+
+.inline-pcbuilderpage-130 {
+  font-size: 10px;
+}
+
+.inline-pcbuilderpage-131 {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.inline-pcbuilderpage-132 {
+  display: flex;
+  gap: 10px;
+}
+
+.inline-pcbuilderpage-133 {
+  flex: 1;
+}
+
+.inline-pcbuilderpage-134 {
+  padding: 24px;
+}
+
+.inline-pcbuilderpage-135 {
+  margin-bottom: 16px;
+}
+
+.inline-pcbuilderpage-136 {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.inline-pcbuilderpage-137 {
+  background: rgba(255,255,255,0.02);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.inline-pcbuilderpage-138 {
+  width: 100%;
+}

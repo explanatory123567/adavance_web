@@ -1,0 +1,245 @@
+@media (max-width: 900px) {
+  .components-page .container-wide { padding-left: 18px; padding-right: 18px; }
+}
+
+/* Extracted static inline styles */
+.inline-componentspage-0 {
+  padding: 40px 0 80px 0;
+}
+
+.inline-componentspage-1 {
+  margin-bottom: 30px;
+}
+
+.inline-componentspage-2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.inline-componentspage-3 {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.inline-componentspage-4 {
+  font-size: 36px;
+  font-weight: 800;
+}
+
+.inline-componentspage-5 {
+  font-size: 14.5px;
+  color: var(--text-secondary);
+}
+
+.inline-componentspage-6 {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  margin-bottom: 28px;
+}
+
+.inline-componentspage-7 {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+.inline-componentspage-8 {
+  padding: 22px;
+  position: sticky;
+  top: 90px;
+}
+
+.inline-componentspage-9 {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.inline-componentspage-10 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.inline-componentspage-11 {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inline-componentspage-12 {
+  margin-bottom: 18px;
+}
+
+.inline-componentspage-13 {
+  position: relative;
+}
+
+.inline-componentspage-14 {
+  padding-left: 34px;
+  font-size: 13px;
+}
+
+.inline-componentspage-15 {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.inline-componentspage-16 {
+  margin-bottom: 20px;
+}
+
+.inline-componentspage-17 {
+  margin-bottom: 6px;
+}
+
+.inline-componentspage-18 {
+  margin-bottom: 0;
+}
+
+.inline-componentspage-19 {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--neon-cyan);
+}
+
+.inline-componentspage-20 {
+  width: 100%;
+  accent-color: var(--neon-cyan);
+  cursor: pointer;
+}
+
+.inline-componentspage-21 {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.inline-componentspage-22 {
+  margin-bottom: 20px;
+}
+
+.inline-componentspage-23 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inline-componentspage-24 {
+  margin-bottom: 20px;
+}
+
+.inline-componentspage-25 {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.inline-componentspage-26 {
+  accent-color: var(--neon-cyan);
+}
+
+.inline-componentspage-27 {
+  margin-bottom: 20px;
+}
+
+.inline-componentspage-28 {
+  display: flex;
+  gap: 6px;
+}
+
+.inline-componentspage-29 {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.inline-componentspage-30 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text-main);
+}
+
+.inline-componentspage-31 {
+  accent-color: #10b981;
+  width: 16px;
+  height: 16px;
+}
+
+.inline-componentspage-32 {
+  padding: 12px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.inline-componentspage-33 {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+.inline-componentspage-34 {
+  color: var(--neon-cyan);
+}
+
+.inline-componentspage-35 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inline-componentspage-36 {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.inline-componentspage-37 {
+  width: auto;
+  padding: 6px 14px;
+  font-size: 13px;
+  background: #0d1326;
+  cursor: pointer;
+}
+
+.inline-componentspage-38 {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.inline-componentspage-39 {
+  margin: 0 auto 16px;
+}
+
+.inline-componentspage-40 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.inline-componentspage-41 {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  margin-bottom: 20px;
+}

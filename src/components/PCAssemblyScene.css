@@ -1,0 +1,13 @@
+.pc-builder-canvas {
+  min-height: 380px;
+  background: radial-gradient(circle at 50% 42%, rgba(15, 45, 67, 0.75), #070a12 72%);
+}
+
+.pc-assembly-label {
+  color: rgba(226, 247, 255, 0.8);
+  font-family: var(--font-cyber);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  user-select: none;
+}
