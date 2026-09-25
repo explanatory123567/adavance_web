@@ -1,5 +1,59 @@
 @media (max-width: 760px) {
-  .profile-page .container-wide { padding-left: 16px; padding-right: 16px; }
+  .profile-page .container-wide {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+.profile-avatar-editor {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 0 20px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.profile-avatar-editor img {
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid var(--neon-cyan);
+}
+.profile-avatar-editor input {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.profile-avatar-editor small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.address-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+.address-form .address-default-toggle,
+.address-form button {
+  grid-column: 1 / -1;
+}
+.address-default-toggle {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .address-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Extracted static inline styles */
@@ -10,7 +64,11 @@
 .inline-profilepage-1 {
   padding: 30px;
   margin-bottom: 30px;
-  background: linear-gradient(135deg, rgba(13, 17, 34, 0.95) 0%, rgba(20, 28, 55, 0.6) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(13, 17, 34, 0.95) 0%,
+    rgba(20, 28, 55, 0.6) 100%
+  );
   border-color: rgba(0, 240, 255, 0.3);
 }
 
@@ -269,7 +327,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background: rgba(255,255,255,0.02);
+  background: rgba(255, 255, 255, 0.02);
   border-radius: 8px;
   cursor: pointer;
 }

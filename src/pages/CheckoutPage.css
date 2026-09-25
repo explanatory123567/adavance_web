@@ -1,9 +1,43 @@
-.checkout-page input, .checkout-page select { min-height: 42px; }
+.checkout-page input,
+.checkout-page select {
+  min-height: 42px;
+}
 @media (max-width: 560px) {
-  .checkout-page .container { padding-left: 16px; padding-right: 16px; }
+  .checkout-page .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
 
 /* Extracted static inline styles */
+.gcash-payment-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(0, 212, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.gcash-payment-panel strong {
+  color: #00d4ff;
+  font-size: 15px;
+}
+.gcash-payment-panel b {
+  color: #fff;
+}
+.gcash-payment-panel small {
+  color: var(--text-muted);
+}
+.checkout-address-link {
+  margin-top: 7px;
+  color: var(--neon-cyan);
+  font-size: 11px;
+}
+
 .inline-checkoutpage-0 {
   padding: 60px 0 100px 0;
 }

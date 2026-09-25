@@ -1,4 +1,6 @@
-.compare-page table { width: 100%; }
+.compare-page table {
+  width: 100%;
+}
 .compare-picker {
   display: grid;
   grid-template-columns: 1fr;
@@ -49,7 +51,10 @@
   }
 }
 @media (max-width: 760px) {
-  .compare-page .container-wide { padding-left: 16px; padding-right: 16px; }
+  .compare-page .container-wide {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
 
 /* Extracted static inline styles */
@@ -160,7 +165,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(239,68,68,0.4);
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .inline-comparepage-18 {

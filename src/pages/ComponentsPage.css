@@ -1,5 +1,8 @@
 @media (max-width: 900px) {
-  .components-page .container-wide { padding-left: 18px; padding-right: 18px; }
+  .components-page .container-wide {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
 }
 
 /* Extracted static inline styles */

@@ -1,5 +1,8 @@
 @media (max-width: 760px) {
-  .orders-page .container-wide { padding-left: 16px; padding-right: 16px; }
+  .orders-page .container-wide {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
 
 /* Extracted static inline styles */

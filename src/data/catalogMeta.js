@@ -1,0 +1,76 @@
+export const CATEGORIES = [
+  { id: "cpu", name: "CPU / Processors", icon: "Cpu", short: "CPU", count: 18 },
+  {
+    id: "gpu",
+    name: "Graphics Cards",
+    icon: "Monitor",
+    short: "GPU",
+    count: 24,
+  },
+  {
+    id: "motherboard",
+    name: "Motherboards",
+    icon: "CircuitBoard",
+    short: "Motherboard",
+    count: 16,
+  },
+  { id: "ram", name: "Memory / RAM", icon: "Layers", short: "RAM", count: 20 },
+  {
+    id: "storage",
+    name: "Storage / SSD",
+    icon: "HardDrive",
+    short: "Storage",
+    count: 22,
+  },
+  { id: "psu", name: "Power Supplies", icon: "Zap", short: "PSU", count: 15 },
+  { id: "case", name: "PC Cases", icon: "Box", short: "Case", count: 18 },
+  {
+    id: "cooler",
+    name: "CPU Coolers",
+    icon: "Snowflake",
+    short: "Cooler",
+    count: 19,
+  },
+  { id: "fans", name: "Case Fans", icon: "Wind", short: "Fans", count: 14 },
+];
+
+export const BRANDS = [
+  "NVIDIA",
+  "AMD",
+  "Intel",
+  "ASUS ROG",
+  "MSI",
+  "Corsair",
+  "NZXT",
+  "Lian Li",
+  "G.Skill",
+  "Samsung",
+  "Crucial",
+  "be quiet!",
+];
+
+export const ADMIN_STATS = {
+  totalSales: 248950,
+  salesGrowth: "+18.4%",
+  totalOrders: 1429,
+  ordersGrowth: "+12.1%",
+  totalProducts: 348,
+  lowStockCount: 7,
+  activeCustomers: 5120,
+  monthlySales: [
+    { month: "Jan", sales: 18400, orders: 98 },
+    { month: "Feb", sales: 22100, orders: 114 },
+    { month: "Mar", sales: 26800, orders: 135 },
+    { month: "Apr", sales: 24200, orders: 122 },
+    { month: "May", sales: 31500, orders: 168 },
+    { month: "Jun", sales: 38900, orders: 210 },
+    { month: "Jul", sales: 42300, orders: 245 },
+    { month: "Aug", sales: 44750, orders: 260 },
+  ],
+  categoryBreakdown: [
+    { category: "Graphics Cards", percentage: 42, color: "#00f0ff" },
+    { category: "Processors (CPUs)", percentage: 26, color: "#9d4edd" },
+    { category: "Custom Pre-built Rigs", percentage: 18, color: "#3b82f6" },
+    { category: "Chassis & Cooling", percentage: 14, color: "#10b981" },
+  ],
+};

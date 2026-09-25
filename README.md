@@ -1,4 +1,29 @@
-# Getting Started with Create React App
+# Next Gear: MongoDB-backed PC Builder
+
+The storefront now uses the Express API for catalog, authentication, verification codes, orders, and users. Product records are seeded into MongoDB; the browser no longer initializes catalog or order records from the old mock seed.
+
+## Local setup
+
+1. Install MongoDB locally or create a MongoDB Atlas database.
+2. Copy `.env.example` to `.env` and set `MONGODB_URI` and a long `JWT_SECRET`.
+3. Create a Google reCAPTCHA v2 checkbox site/secret key and set both reCAPTCHA variables. Add `REACT_APP_RECAPTCHA_SITE_KEY` to the frontend environment.
+4. Set SMTP variables so verification codes can be delivered by email.
+5. Run `npm run seed` once to load the catalog into MongoDB.
+6. Run `npm run dev` to start the API on port 4000 and the React app on port 3000.
+
+Without SMTP, the API logs verification codes to the server console for local testing. Do not use that mode in production.
+
+## Available scripts
+
+- `npm run dev`: start the API and React development server.
+- `npm run server`: start only the API.
+- `npm run seed`: replace the MongoDB catalog with the included catalog seed.
+- `npm run create-admin`: interactively create an administrator account in MongoDB.
+- `npm run build`: build the React app for production.
+
+After creating the administrator, restart the app, sign in with that account, and the Admin Dashboard opens automatically. Public registration always creates regular users.
+
+## Create React App reference
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

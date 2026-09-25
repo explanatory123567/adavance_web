@@ -1,6 +1,10 @@
 .pc-builder-canvas {
   min-height: 380px;
-  background: radial-gradient(circle at 50% 42%, rgba(15, 45, 67, 0.75), #070a12 72%);
+  background: radial-gradient(
+    circle at 50% 42%,
+    rgba(15, 45, 67, 0.75),
+    #070a12 72%
+  );
 }
 
 .pc-assembly-label {

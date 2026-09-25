@@ -42,8 +42,10 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(180deg, rgba(10, 18, 32, 0.2), rgba(10, 18, 32, 0));
 }
 
 .inline-app-1 {
   flex: 1;
+  background: transparent;
 }

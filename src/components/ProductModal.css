@@ -10,7 +10,12 @@
 
 .product-modal__glow-edge {
   height: 4px;
-  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-blue));
+  background: linear-gradient(
+    90deg,
+    var(--neon-cyan),
+    var(--neon-purple),
+    var(--neon-blue)
+  );
 }
 
 .product-modal__header {
@@ -75,7 +80,11 @@
   height: 420px;
   padding: 32px;
   overflow: hidden;
-  background: linear-gradient(145deg, rgba(20, 28, 55, 0.6), rgba(8, 12, 24, 0.95));
+  background: linear-gradient(
+    145deg,
+    rgba(20, 28, 55, 0.6),
+    rgba(8, 12, 24, 0.95)
+  );
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
 }

@@ -1,9 +1,25 @@
-header { width: 100%; }
+header {
+  width: 100%;
+}
 @media (max-width: 900px) {
-  header nav { gap: 2px; }
+  header nav {
+    gap: 2px;
+  }
 }
 @media (max-width: 680px) {
-  header .container-wide { padding-left: 14px; padding-right: 14px; }
+  header .container-wide {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+.brand-logo-image {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  display: block;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(123, 163, 255, 0.18);
 }
 
 /* Extracted static inline styles */
@@ -11,10 +27,10 @@ header { width: 100%; }
   position: sticky;
   top: 0;
   z-index: 900;
-  background: rgba(8, 11, 20, 0.88);
+  background: rgba(10, 17, 29, 0.78);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .inline-navbar-1 {
@@ -181,6 +197,11 @@ header { width: 100%; }
 
 .inline-navbar-24 {
   position: relative;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  color: var(--neon-cyan);
 }
 
 .inline-navbar-25 {
