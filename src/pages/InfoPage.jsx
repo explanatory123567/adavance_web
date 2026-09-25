@@ -15,8 +15,6 @@ const pageContent = {
     subtitle: "The command center for better gaming hardware decisions.",
     body: "Next Gear brings component discovery, compatibility analysis, saved builds, and order tracking into one focused workspace.",
     label: "THE STUDIO",
-    image:
-      "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=1200&auto=format&fit=crop&q=85",
     cards: [
       [
         "01",
@@ -36,8 +34,6 @@ const pageContent = {
     subtitle: "Our support channel is built for real hardware questions.",
     body: "Reach the Next Gear team for account, order, delivery, and component support.",
     label: "CONTACT",
-    image:
-      "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=1200&auto=format&fit=crop&q=85",
     cards: [
       [
         "EMAIL",
@@ -53,8 +49,6 @@ const pageContent = {
     subtitle: "The short version of how Next Gear works.",
     body: "Save builds and orders after signing in. Use the Builder to check compatibility. GCash orders require a payment reference; COD orders are collected on delivery.",
     label: "FAQ / FIELD NOTES",
-    image:
-      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=85",
     cards: [
       [
         "ACCOUNT",
@@ -78,8 +72,6 @@ const pageContent = {
     subtitle: "Guides, notes, and performance context for the next upgrade.",
     body: "Our resource desk is being assembled around practical hardware decisions, not generic noise.",
     label: "RESOURCE DESK",
-    image:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=1200&auto=format&fit=crop&q=85",
     cards: [
       [
         "THERMALS",
@@ -104,8 +96,6 @@ const pageContent = {
       "Privacy that supports the product instead of distracting from it.",
     body: "We use account, address, order, and saved-build information to provide authentication, checkout, delivery, and account features.",
     label: "LEGAL / PRIVACY",
-    image:
-      "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&auto=format&fit=crop&q=85",
     cards: [
       [
         "ACCOUNT",
@@ -129,8 +119,6 @@ const pageContent = {
     subtitle: "The operating principles behind the Next Gear marketplace.",
     body: "Use accurate account and delivery information, respect payment requirements, and use the service lawfully.",
     label: "LEGAL / TERMS",
-    image:
-      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&auto=format&fit=crop&q=85",
     cards: [
       [
         "HONESTY",
@@ -154,8 +142,7 @@ const pageContent = {
     subtitle: "Essential cookies keep your Next Gear session steady.",
     body: "Essential cookies support authentication and secure checkout. We do not use cookies to sell personal information.",
     label: "LEGAL / COOKIES",
-    image:
-      "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&auto=format&fit=crop&q=85",
+
     cards: [
       [
         "SESSION",
@@ -179,8 +166,6 @@ const pageContent = {
     subtitle: "A better hardware workflow should be open to every builder.",
     body: "Contact support@nextgear.example when you need an alternate format, assistance, or an accessibility issue addressed.",
     label: "ACCESSIBILITY",
-    image:
-      "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1200&auto=format&fit=crop&q=85",
     cards: [
       [
         "ACCESS",
@@ -204,45 +189,39 @@ const pageContent = {
 const team = [
   {
     name: "Karlo Cabasal",
-    role: "Founder & Product Engineer",
-    bio: "Shapes the product architecture and the builder experience.",
-    image:
-      "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=700&auto=format&fit=crop&q=85",
+    role: "Project Lead | Frontend/Backend Developer",
+    bio: "I think, therefore I am",
+    image: "/images/meet-the-team/karlo.png",
   },
   {
-    name: "Mika Santos",
-    role: "Hardware Systems Lead",
-    bio: "Turns component data into useful compatibility decisions.",
-    image:
-      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=700&auto=format&fit=crop&q=85",
+    name: "Misael Arcega",
+    role: "Frontend Developer",
+    bio: "Tres is passed",
+    image: "/images/meet-the-team/misael.jpg",
   },
   {
-    name: "Rafael Cruz",
-    role: "Customer Experience Lead",
-    bio: "Keeps support, delivery, and every handoff human.",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=700&auto=format&fit=crop&q=85",
+    name: "Klint Reniel Bautista",
+    role: "Frontend Developer",
+    bio: "Hello",
+    image: "/images/meet-the-team/klint.jpg",
   },
   {
-    name: "Lena Reyes",
-    role: "Product Designer",
-    bio: "Turns complex hardware workflows into calm, clear interfaces.",
-    image:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=700&auto=format&fit=crop&q=85",
+    name: "Mark Renz Villanueva",
+    role: "Backend Developer/Database",
+    bio: "Hi",
+    image: "/images/meet-the-team/mark.jpg",
   },
   {
-    name: "Noah Villanueva",
-    role: "Fulfillment Manager",
-    bio: "Coordinates inventory, packing, and the route from lab to door.",
-    image:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=700&auto=format&fit=crop&q=85",
+    name: "Bryan Dominic De Leon",
+    role: "UI/UX Designer",
+    bio: "hi",
+    image: "/images/meet-the-team/bryan.png",
   },
   {
-    name: "Ari Mendoza",
-    role: "Performance Analyst",
-    bio: "Keeps benchmarks grounded in real games and real workloads.",
-    image:
-      "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=700&auto=format&fit=crop&q=85",
+    name: "Angelo Sebastian",
+    role: "Frontend Developer",
+    bio: "hello",
+    image: "/images/meet-the-team/angelo.jpg",
   },
 ];
 
@@ -324,7 +303,6 @@ export default function InfoPage({ pageKey }) {
             <h1>{content.title}</h1>
             <p>{content.subtitle}</p>
           </div>
-          <img src={content.image} alt="Next Gear" />
         </section>
         <section className="info-intro">
           <div className="info-icon">

@@ -257,7 +257,7 @@ export function AppProvider({ children }) {
 
   // Saved Builds & Orders & Users
   const [savedBuilds, setSavedBuilds] = useState([]);
-  const [orders, setOrders] = useState(FALLBACK_ORDERS);
+  const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState(FALLBACK_USERS);
   const [models3d, setModels3d] = useState([]);
   const [addresses, setAddresses] = useState([]);
@@ -381,7 +381,7 @@ export function AppProvider({ children }) {
           setCart([]);
           setWishlist([]);
           setSavedBuilds([]);
-          setOrders(FALLBACK_ORDERS);
+          setOrders([]);
           setAddresses([]);
         });
     }
