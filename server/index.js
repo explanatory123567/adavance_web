@@ -296,152 +296,6 @@ async function deleteModelAssetById(id) {
 }
 
 const verificationCodes = new Map();
-const fallbackCatalog = [
-  {
-    id: "cpu-1",
-    name: "AMD Ryzen 7 7800X3D",
-    brand: "AMD",
-    category: "cpu",
-    price: 449,
-    stock: 18,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "8-core gaming CPU with 3D V-Cache.",
-    performanceScore: 96,
-    wattage: 120,
-    specs: { socket: "AM5", cores: "8C/16T" },
-    featured: true,
-    isPopular: true,
-    rating: 4.9,
-    reviewsCount: 310,
-    inStock: true,
-  },
-  {
-    id: "gpu-1",
-    name: "NVIDIA GeForce RTX 5090 32GB",
-    brand: "NVIDIA",
-    category: "gpu",
-    price: 1999,
-    stock: 6,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "Flagship ray-traced gaming graphics card.",
-    performanceScore: 99,
-    wattage: 575,
-    specs: { length: "304mm", vram: "32GB GDDR7" },
-    featured: true,
-    isPopular: true,
-    rating: 4.98,
-    reviewsCount: 142,
-    inStock: true,
-  },
-  {
-    id: "mb-1",
-    name: "MSI MAG X670E Tomahawk WiFi",
-    brand: "MSI",
-    category: "motherboard",
-    price: 279,
-    stock: 14,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "AM5 DDR5 motherboard with PCIe 5.0.",
-    performanceScore: 92,
-    wattage: 70,
-    specs: { socket: "AM5" },
-    featured: true,
-    isPopular: true,
-    rating: 4.8,
-    reviewsCount: 204,
-    inStock: true,
-  },
-  {
-    id: "ram-1",
-    name: "G.Skill Trident Z5 RGB 32GB DDR5-6000",
-    brand: "G.Skill",
-    category: "ram",
-    price: 139,
-    stock: 25,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "Low-latency dual-channel DDR5 kit.",
-    performanceScore: 90,
-    wattage: 10,
-    specs: { speed: "DDR5-6000", capacity: "32GB" },
-    featured: true,
-    isPopular: true,
-    rating: 4.8,
-    reviewsCount: 188,
-    inStock: true,
-  },
-  {
-    id: "storage-1",
-    name: "Samsung 990 PRO 2TB NVMe",
-    brand: "Samsung",
-    category: "storage",
-    price: 179,
-    stock: 22,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "High-speed PCIe 4.0 NVMe storage.",
-    performanceScore: 93,
-    wattage: 8,
-    specs: { capacity: "2TB", interface: "PCIe 4.0" },
-    featured: true,
-    isPopular: true,
-    rating: 4.9,
-    reviewsCount: 260,
-    inStock: true,
-  },
-  {
-    id: "psu-1",
-    name: "Corsair RM1000x Shift 1000W",
-    brand: "Corsair",
-    category: "psu",
-    price: 189,
-    stock: 12,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "ATX 3.0 modular power supply.",
-    performanceScore: 91,
-    wattage: 1000,
-    specs: { efficiency: "80+ Gold" },
-    featured: false,
-    isPopular: true,
-    rating: 4.8,
-    reviewsCount: 120,
-    inStock: true,
-  },
-  {
-    id: "case-1",
-    name: "Lian Li O11 Dynamic EVO RGB",
-    brand: "Lian Li",
-    category: "case",
-    price: 159,
-    stock: 10,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "Dual-chamber tempered-glass chassis.",
-    performanceScore: 88,
-    wattage: 0,
-    specs: { gpuClearance: "420mm", includedFans: "Free fans included" },
-    featured: true,
-    isPopular: true,
-    rating: 4.9,
-    reviewsCount: 198,
-    inStock: true,
-  },
-  {
-    id: "cooler-1",
-    name: "NZXT Kraken Elite 360 RGB",
-    brand: "NZXT",
-    category: "cooler",
-    price: 249,
-    stock: 9,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "360mm liquid CPU cooler with LCD display.",
-    performanceScore: 95,
-    wattage: 15,
-    specs: { sockets: "AM5,LGA1700" },
-    featured: true,
-    isPopular: true,
-    rating: 4.7,
-    reviewsCount: 96,
-    inStock: true,
-  },
-];
 const fallbackUsers = [
   {
     id: "admin-1",
@@ -999,8 +853,14 @@ function requireAdmin(req, res, next) {
   return requireRole(["admin"])(req, res, next);
 }
 
-app.get("/api/catalog", async (req, res) => {
-  if (!dbConnected) return res.json(fallbackCatalog);
+function requireDatabase(req, res, next) {
+  if (!dbConnected) {
+    return res.status(503).json({ message: "Product catalog is unavailable until the database is connected." });
+  }
+  next();
+}
+
+app.get("/api/catalog", requireDatabase, async (req, res) => {
   res.json(await Product.find().sort({ category: 1, name: 1 }).lean());
 });
 app.get("/api/notifications", requireAuth, async (req, res) => {
@@ -1200,7 +1060,7 @@ app.get("/api/admin/analytics", requireAuth, requireAdmin, async (req, res) => {
     return res.json(
       buildAdminAnalytics({
         users: fallbackUsers,
-        products: fallbackCatalog,
+        products: [],
         orders: fallbackOrders,
         addresses: [],
       }),
@@ -1247,7 +1107,9 @@ app.get("/api/account", requireAuth, async (req, res) => {
     cart: user.cart || [],
     wishlist: user.wishlist || [],
     savedBuilds: user.savedBuilds || [],
-    orders: await Order.find({ email: req.auth.email })
+    orders: await Order.find(
+      req.auth.role === "admin" ? {} : { email: req.auth.email },
+    )
       .sort({ createdAt: -1 })
       .lean(),
     addresses: await Address.find({ userId: req.auth.sub })
@@ -1460,6 +1322,8 @@ app.get("/api/users", requireAuth, requireRole(["admin"]), async (req, res) => {
         ...user,
         id: user.id,
         _id: user.id,
+        ordersCount: 0,
+        totalSpent: 0,
       })),
     );
   }
@@ -1467,7 +1331,59 @@ app.get("/api/users", requireAuth, requireRole(["admin"]), async (req, res) => {
     .select("-passwordHash")
     .sort({ createdAt: -1 })
     .lean();
-  res.json(users.map((user) => ({ ...user, id: user._id.toString() })));
+  const orderSummaries = await Order.aggregate([
+    {
+      $match: {
+        $expr: {
+          $and: [
+            {
+              $in: [
+                { $toLower: { $ifNull: ["$email", ""] } },
+                users.map((user) => user.email.toLowerCase()),
+              ],
+            },
+            {
+              $not: [
+                {
+                  $in: [
+                    { $toLower: { $ifNull: ["$status", ""] } },
+                    ["cancelled", "canceled", "failed"],
+                  ],
+                },
+              ],
+            },
+            {
+              $ne: [
+                { $toLower: { $ifNull: ["$paymentStatus", ""] } },
+                "failed",
+              ],
+            },
+          ],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { $toLower: "$email" },
+        ordersCount: { $sum: 1 },
+        totalSpent: { $sum: { $ifNull: ["$total", 0] } },
+      },
+    },
+  ]);
+  const summariesByEmail = new Map(
+    orderSummaries.map((summary) => [summary._id, summary]),
+  );
+  res.json(
+    users.map((user) => {
+      const summary = summariesByEmail.get(user.email.toLowerCase());
+      return {
+        ...user,
+        id: user._id.toString(),
+        ordersCount: summary?.ordersCount || 0,
+        totalSpent: summary?.totalSpent || 0,
+      };
+    }),
+  );
 });
 app.get("/api/models", async (req, res) => {
   if (!dbConnected) return res.json([]);
@@ -1529,17 +1445,14 @@ app.delete("/api/addresses/:id", requireAuth, async (req, res) => {
   await Address.deleteOne({ _id: req.params.id, userId: req.auth.sub });
   res.status(204).end();
 });
-app.post("/api/products", requireAuth, requireAdmin, async (req, res) => {
+app.post("/api/products", requireAuth, requireAdmin, requireDatabase, async (req, res) => {
   const productData = {
     ...req.body,
     id:
       req.body.id ||
       `${req.body.category || "product"}-${crypto.randomInt(100000, 999999)}`,
   };
-  const product = dbConnected
-    ? await Product.create(productData)
-    : { ...productData, inStock: productData.stock > 0 };
-  if (!dbConnected) fallbackCatalog.unshift(product);
+  const product = await Product.create(productData);
   await publishNotification({
     audience: "users",
     title: "New product added",
@@ -1559,24 +1472,13 @@ app.post("/api/products", requireAuth, requireAdmin, async (req, res) => {
   }
   res.status(201).json(product);
 });
-app.patch("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
-  let product;
-  let previousProduct;
-  if (!dbConnected) {
-    const index = fallbackCatalog.findIndex((item) => item.id === req.params.id);
-    if (index >= 0) {
-      previousProduct = fallbackCatalog[index];
-      fallbackCatalog[index] = { ...fallbackCatalog[index], ...req.body };
-      product = fallbackCatalog[index];
-    }
-  } else {
-    previousProduct = await Product.findOne({ id: req.params.id }).lean();
-    product = await Product.findOneAndUpdate(
-      { id: req.params.id },
-      { $set: req.body },
-      { new: true, runValidators: true },
-    ).lean();
-  }
+app.patch("/api/products/:id", requireAuth, requireAdmin, requireDatabase, async (req, res) => {
+  const previousProduct = await Product.findOne({ id: req.params.id }).lean();
+  const product = await Product.findOneAndUpdate(
+    { id: req.params.id },
+    { $set: req.body },
+    { new: true, runValidators: true },
+  ).lean();
   if (!product) return res.status(404).json({ message: "Product not found." });
   if (
     previousProduct &&
@@ -1594,13 +1496,8 @@ app.patch("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
   }
   res.json(product);
 });
-app.delete("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
-  if (!dbConnected) {
-    const index = fallbackCatalog.findIndex((item) => item.id === req.params.id);
-    if (index >= 0) fallbackCatalog.splice(index, 1);
-  } else {
-    await Product.deleteOne({ id: req.params.id });
-  }
+app.delete("/api/products/:id", requireAuth, requireAdmin, requireDatabase, async (req, res) => {
+  await Product.deleteOne({ id: req.params.id });
   res.status(204).end();
 });
 app.patch(

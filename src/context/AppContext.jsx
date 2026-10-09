@@ -13,161 +13,6 @@ import { summarizeProductReviews } from "../utils/productUtils";
 
 const AppContext = createContext();
 
-const FALLBACK_PRODUCTS = [
-  {
-    id: "cpu-1",
-    name: "AMD Ryzen 7 7800X3D",
-    brand: "AMD",
-    category: "cpu",
-    price: 449,
-    stock: 18,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "8-core gaming CPU with 3D V-Cache.",
-    performanceScore: 96,
-    wattage: 120,
-    specs: { socket: "AM5", cores: "8C/16T" },
-    featured: true,
-    isPopular: true,
-    rating: 4.9,
-    reviewsCount: 310,
-    inStock: true,
-  },
-  {
-    id: "gpu-1",
-    name: "NVIDIA GeForce RTX 5090 32GB",
-    brand: "NVIDIA",
-    category: "gpu",
-    price: 1999,
-    stock: 6,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "Flagship ray-traced gaming graphics card.",
-    performanceScore: 99,
-    wattage: 575,
-    specs: { length: "304mm", vram: "32GB GDDR7" },
-    featured: true,
-    isPopular: true,
-    rating: 4.98,
-    reviewsCount: 142,
-    inStock: true,
-  },
-  {
-    id: "mb-1",
-    name: "MSI MAG X670E Tomahawk WiFi",
-    brand: "MSI",
-    category: "motherboard",
-    price: 279,
-    stock: 14,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "AM5 DDR5 motherboard with PCIe 5.0.",
-    performanceScore: 92,
-    wattage: 70,
-    specs: { socket: "AM5" },
-    featured: true,
-    isPopular: true,
-    rating: 4.8,
-    reviewsCount: 204,
-    inStock: true,
-  },
-  {
-    id: "ram-1",
-    name: "G.Skill Trident Z5 RGB 32GB DDR5-6000",
-    brand: "G.Skill",
-    category: "ram",
-    price: 139,
-    stock: 25,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "Low-latency dual-channel DDR5 kit.",
-    performanceScore: 90,
-    wattage: 10,
-    specs: { speed: "DDR5-6000", capacity: "32GB" },
-    featured: true,
-    isPopular: true,
-    rating: 4.8,
-    reviewsCount: 188,
-    inStock: true,
-  },
-  {
-    id: "storage-1",
-    name: "Samsung 990 PRO 2TB NVMe",
-    brand: "Samsung",
-    category: "storage",
-    price: 179,
-    stock: 22,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "High-speed PCIe 4.0 NVMe storage.",
-    performanceScore: 93,
-    wattage: 8,
-    specs: { capacity: "2TB", interface: "PCIe 4.0" },
-    featured: true,
-    isPopular: true,
-    rating: 4.9,
-    reviewsCount: 260,
-    inStock: true,
-  },
-  {
-    id: "psu-1",
-    name: "Corsair RM1000x Shift 1000W",
-    brand: "Corsair",
-    category: "psu",
-    price: 189,
-    stock: 12,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "ATX 3.0 modular power supply.",
-    performanceScore: 91,
-    wattage: 1000,
-    specs: { efficiency: "80+ Gold" },
-    featured: false,
-    isPopular: true,
-    rating: 4.8,
-    reviewsCount: 120,
-    inStock: true,
-  },
-  {
-    id: "case-1",
-    name: "Lian Li O11 Dynamic EVO RGB",
-    brand: "Lian Li",
-    category: "case",
-    price: 159,
-    stock: 10,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "Dual-chamber tempered-glass chassis.",
-    performanceScore: 88,
-    wattage: 0,
-    specs: { gpuClearance: "420mm", includedFans: "Free fans included" },
-    featured: true,
-    isPopular: true,
-    rating: 4.9,
-    reviewsCount: 198,
-    inStock: true,
-  },
-  {
-    id: "cooler-1",
-    name: "NZXT Kraken Elite 360 RGB",
-    brand: "NZXT",
-    category: "cooler",
-    price: 249,
-    stock: 9,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "360mm liquid CPU cooler with LCD display.",
-    performanceScore: 95,
-    wattage: 15,
-    specs: { sockets: "AM5,LGA1700" },
-    featured: true,
-    isPopular: true,
-    rating: 4.7,
-    reviewsCount: 96,
-    inStock: true,
-  },
-];
-
 const normalizeCatalogProducts = (items) =>
   items
     .filter((product) => product.category !== "fans")
@@ -182,14 +27,6 @@ const normalizeCatalogProducts = (items) =>
           }
         : product,
     );
-
-const mergeCatalogProducts = (catalogItems) => {
-  const apiProductIds = new Set(catalogItems.map((product) => product.id));
-  return normalizeCatalogProducts([
-    ...FALLBACK_PRODUCTS.filter((product) => !apiProductIds.has(product.id)),
-    ...catalogItems,
-  ]);
-};
 
 const FALLBACK_USERS = [
   { id: "u-1", name: "Ava Reyes", status: "Active" },
@@ -213,7 +50,7 @@ export function AppProvider({ children }) {
   const [adminTab, setAdminTab] = useState("dashboard");
 
   // Products & Prebuilts catalog (dynamic for admin mutations)
-  const [products, setProducts] = useState(FALLBACK_PRODUCTS);
+  const [products, setProducts] = useState([]);
   const [prebuilts] = useState([]);
   const [adminAnalytics, setAdminAnalytics] = useState({
     totalSales: 0,
@@ -270,7 +107,7 @@ export function AppProvider({ children }) {
         const catalogItems = Array.isArray(catalog)
           ? catalog
           : catalog.products || [];
-        setProducts(mergeCatalogProducts(catalogItems));
+        setProducts(normalizeCatalogProducts(catalogItems));
         setBuilderConfig((current) => {
           if (Object.keys(current).some((key) => current[key])) {
             return current;
@@ -289,7 +126,7 @@ export function AppProvider({ children }) {
         });
       })
       .catch(() => {
-        setProducts(FALLBACK_PRODUCTS);
+        setProducts([]);
       });
     dataApi
       .models()
@@ -320,7 +157,7 @@ export function AppProvider({ children }) {
         const catalogItems = Array.isArray(catalog)
           ? catalog
           : catalog.products || [];
-        setProducts(mergeCatalogProducts(catalogItems));
+        setProducts(normalizeCatalogProducts(catalogItems));
       }).catch(() => {});
     };
     const interval = setInterval(refreshCatalog, 15000);
@@ -391,6 +228,27 @@ export function AppProvider({ children }) {
   }, [authToken, authUser?.role, products.length]);
 
   useEffect(() => {
+    if (!authToken || authUser?.role !== "admin") return;
+
+    let active = true;
+    const refreshUsers = () =>
+      dataApi
+        .users(authToken)
+        .then((items) => {
+          if (active) setUsers(items);
+        })
+        .catch((error) => {
+          console.error("Unable to refresh admin users:", error);
+        });
+
+    const interval = setInterval(refreshUsers, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [authToken, authUser?.role]);
+
+  useEffect(() => {
     let active = true;
     const refreshReviews = () =>
       dataApi.reviews().then((items) => {
@@ -418,7 +276,9 @@ export function AppProvider({ children }) {
       }).catch(() => {});
       dataApi.orders(authToken).then((items) => {
         if (active) setOrders(items);
-      }).catch(() => {});
+      }).catch((error) => {
+        console.error("Unable to refresh account orders:", error);
+      });
       dataApi.myReviews(authToken).then((items) => {
         if (active) setMyReviews(items);
       }).catch(() => {});
@@ -521,6 +381,41 @@ export function AppProvider({ children }) {
       })),
     [products, reviews],
   );
+  const usersWithOrderStats = useMemo(() => {
+    const summariesByEmail = new Map();
+    for (const order of orders) {
+      const status = String(order.status || "").toLowerCase();
+      const paymentStatus = String(order.paymentStatus || "").toLowerCase();
+      if (
+        ["cancelled", "canceled", "failed"].includes(status) ||
+        paymentStatus === "failed"
+      ) {
+        continue;
+      }
+      const email = String(order.email || order.customerEmail || "")
+        .trim()
+        .toLowerCase();
+      if (!email) continue;
+      const summary = summariesByEmail.get(email) || {
+        ordersCount: 0,
+        totalSpent: 0,
+      };
+      const total = Number(order.total);
+      summary.ordersCount += 1;
+      summary.totalSpent += Number.isFinite(total) ? total : 0;
+      summariesByEmail.set(email, summary);
+    }
+
+    return users.map((user) => {
+      const email = String(user.email || "").trim().toLowerCase();
+      const summary = summariesByEmail.get(email);
+      return {
+        ...user,
+        ordersCount: summary?.ordersCount || 0,
+        totalSpent: summary?.totalSpent || 0,
+      };
+    });
+  }, [orders, users]);
 
   // Guard action for guests
   const requireAuth = (callback, actionName = "perform this action") => {
@@ -1682,7 +1577,7 @@ export function AppProvider({ children }) {
         getProductReviewSummary,
         replyToReview,
         deleteReview,
-        users,
+        users: usersWithOrderStats,
         toggleUserStatus,
         deleteUser,
         models3d,
