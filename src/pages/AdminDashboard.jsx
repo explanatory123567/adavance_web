@@ -1,6 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
-import { Environment, OrbitControls, useGLTF } from "@react-three/drei";
 import "./AdminDashboard.css";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES, BRANDS } from "../data/catalogMeta";
@@ -13,7 +11,6 @@ import {
   Boxes,
   Cpu,
   Sparkles,
-  Box,
   ShoppingCart,
   Users,
   BarChart3,
@@ -23,27 +20,35 @@ import {
   Trash2,
   Edit2,
   Upload,
-  Eye,
   Shield,
   X,
   Bell,
+  Star,
 } from "lucide-react";
 export default function AdminDashboard() {
   const {
     products,
+    builderConfig,
+    compatibilityStatus,
+    priorityProfile,
+    setPriorityProfile,
+    getRecommendationsForSlot,
+    setBuilderSlot,
+    adminTab,
+    setAdminTab,
     addProduct,
     updateProduct,
     deleteProduct,
     restockProduct,
     orders,
     updateOrderStatus,
+    updateOrderPaymentStatus,
+    adminReviews,
+    replyToReview,
+    deleteReview,
     users,
     toggleUserStatus,
     deleteUser,
-    models3d,
-    addModelAsset,
-    updateModelAsset,
-    deleteModelAsset,
     adminAnalytics = {},
     logout,
     setCurrentPage,
@@ -53,10 +58,34 @@ export default function AdminDashboard() {
     () => products.filter((product) => (product.stock || 0) <= 5),
     [products],
   );
+  const [reviewReplyDrafts, setReviewReplyDrafts] = useState({});
+  const [recommendationSlot, setRecommendationSlot] = useState("gpu");
+  const recommendationProducts = getRecommendationsForSlot(recommendationSlot).slice(0, 6);
+  const compatibilityAudit = useMemo(() => {
+    const requirements = {
+      cpu: ["socket"],
+      gpu: ["length"],
+      motherboard: ["socket", "formFactor"],
+      ram: ["capacity", "speed"],
+      storage: ["capacity", "interface"],
+      psu: ["wattage"],
+      case: ["gpuClearance", "formFactor"],
+      cooler: ["sockets"],
+    };
+    return products.map((product) => {
+      const missing = (requirements[product.category] || []).filter((key) => {
+        const value = key === "wattage" ? product.wattage : product.specs?.[key];
+        return value === undefined || value === null || String(value).trim() === "";
+      });
+      return { ...product, missingCompatibilityFields: missing };
+    });
+  }, [products]);
+  const compatibilityDataIssues = compatibilityAudit.filter(
+    (product) => product.missingCompatibilityFields.length > 0,
+  );
 
   // Active Admin Sub-page Tab
-  const [adminTab, setAdminTab] = useState("dashboard");
-  // 'dashboard' | 'products' | 'categories' | 'inventory' | 'compatibility' | 'recommendations' | 'models' | 'orders' | 'users' | 'analytics' | 'settings'
+  // 'dashboard' | 'products' | 'categories' | 'inventory' | 'compatibility' | 'recommendations' | 'orders' | 'reviews' | 'users' | 'analytics' | 'settings'
 
   // Product Modals State
   const [productModalMode, setProductModalMode] = useState(null); // 'add' | 'edit' | null
@@ -80,7 +109,6 @@ export default function AdminDashboard() {
   const [pCapacity, setPCapacity] = useState("");
   const [pSpeed, setPSpeed] = useState("");
   const [pInterface, setPInterface] = useState("");
-  const [pAirflow, setPAirflow] = useState("");
   const [pSockets, setPSockets] = useState("");
   const [pCores, setPCores] = useState("");
   const [pThreads, setPThreads] = useState("");
@@ -92,7 +120,7 @@ export default function AdminDashboard() {
   const [pFanSupport, setPFanSupport] = useState("");
   const [pDimensions, setPDimensions] = useState("");
 
-  const categoriesWithWattage = ["cpu", "gpu", "psu", "cooler", "fans"];
+  const categoriesWithWattage = ["cpu", "gpu", "psu", "cooler"];
 
   const categorySpecFields = {
     cpu: [
@@ -143,12 +171,6 @@ export default function AdminDashboard() {
       { key: "radiator", label: "Radiator / Size", value: pRadiator, setter: setPRadiator, placeholder: "360mm" },
       { key: "noiseLevel", label: "Noise Level", value: pNoiseLevel, setter: setPNoiseLevel, placeholder: "32 dBA" },
     ],
-    fans: [
-      { key: "airflow", label: "Airflow", value: pAirflow, setter: setPAirflow, placeholder: "63.1 CFM" },
-      { key: "size", label: "Fan Size", value: pFormFactor, setter: setPFormFactor, placeholder: "120mm" },
-      { key: "rpm", label: "RPM", value: pSpeed, setter: setPSpeed, placeholder: "1500 RPM" },
-      { key: "noiseLevel", label: "Noise Level", value: pNoiseLevel, setter: setPNoiseLevel, placeholder: "29 dBA" },
-    ],
   };
 
   const visibleCategoryFields = (categorySpecFields[pCategory] || []).filter(
@@ -178,7 +200,6 @@ export default function AdminDashboard() {
     setPCapacity("");
     setPSpeed("");
     setPInterface("");
-    setPAirflow("");
     setPSockets("");
     setPCores("");
     setPThreads("");
@@ -191,34 +212,6 @@ export default function AdminDashboard() {
     setPDimensions("");
   };
 
-  // 3D Model Upload Modal State
-  const [modelModalOpen, setModelModalOpen] = useState(false);
-  const [replaceModelId, setReplaceModelId] = useState(null);
-  const [previewModel, setPreviewModel] = useState(null);
-  const [modelName, setModelName] = useState("");
-  const [modelProductAssign, setModelProductAssign] = useState(
-    products[0]?.name || "",
-  );
-  const [modelFile, setModelFile] = useState(null);
-
-  const closeModelModal = () => {
-    setModelModalOpen(false);
-    setReplaceModelId(null);
-    setModelName("");
-    setModelFile(null);
-    setModelProductAssign(products[0]?.name || "");
-  };
-
-  function PreviewModel({ url }) {
-    const { scene } = useGLTF(url);
-    return (
-      <primitive
-        object={scene.clone()}
-        scale={0.9}
-        position={[0, -0.2, 0]}
-      />
-    );
-  }
   const handleOpenAddProduct = () => {
     resetProductForm();
     setProductModalMode("add");
@@ -242,7 +235,6 @@ export default function AdminDashboard() {
     setPCapacity(product.specs?.capacity || "");
     setPSpeed(product.specs?.speed || "");
     setPInterface(product.specs?.interface || "");
-    setPAirflow(product.specs?.airflow || "");
     setPSockets(Array.isArray(product.specs?.sockets) ? product.specs.sockets.join(", ") : product.specs?.sockets || "");
     setPCores(product.specs?.cores || "");
     setPThreads(product.specs?.threads || "");
@@ -301,7 +293,6 @@ export default function AdminDashboard() {
       capacity: pCapacity,
       speed: pSpeed,
       interface: pInterface,
-      airflow: pAirflow,
       formFactor: pFormFactor,
       wattage: Number(pWattage),
       tdp: `${pWattage}W`,
@@ -339,52 +330,6 @@ export default function AdminDashboard() {
       });
     }
     setProductModalMode(null);
-  };
-  const handleUpload3DModel = (e) => {
-    e.preventDefault();
-    if (!modelFile) {
-      showToast(
-        "3D model file required",
-        "Choose a GLB, GLTF, or OBJ file before registering it.",
-        "warning",
-      );
-      return;
-    }
-    if (modelFile.size > 10 * 1024 * 1024) {
-      showToast(
-        "3D model is too large",
-        "Choose a model file smaller than 10MB.",
-        "warning",
-      );
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const product = products.find((item) => item.name === modelProductAssign);
-      const payload = {
-        name: modelName || "Custom 3D Chassis Asset",
-        productId: product?.id || "unassigned",
-        assignedProduct: modelProductAssign,
-        url: String(reader.result),
-        format:
-          modelFile.name.split(".").pop().toUpperCase() === "GLTF"
-            ? "GLTF"
-            : modelFile.name.split(".").pop().toUpperCase() === "OBJ"
-              ? "OBJ"
-              : "GLB",
-        fileSize: `${(modelFile.size / 1024 / 1024).toFixed(1)} MB`,
-        status: "Active",
-      };
-
-      const savedModel = replaceModelId
-        ? await updateModelAsset(replaceModelId, payload)
-        : await addModelAsset(payload);
-
-      if (savedModel) {
-        closeModelModal();
-      }
-    };
-    reader.readAsDataURL(modelFile);
   };
   return (
     <div className="admin-dashboard inline-admindashboard-0">
@@ -435,14 +380,14 @@ export default function AdminDashboard() {
               icon: Sparkles,
             },
             {
-              id: "models",
-              label: "3D Models",
-              icon: Box,
-            },
-            {
               id: "orders",
               label: "Orders",
               icon: ShoppingCart,
+            },
+            {
+              id: "reviews",
+              label: "Reviews",
+              icon: Star,
             },
             {
               id: "users",
@@ -1006,6 +951,7 @@ export default function AdminDashboard() {
                     <th className="inline-admindashboard-136">Items</th>
                     <th className="inline-admindashboard-137">Total</th>
                     <th className="inline-admindashboard-138">Payment</th>
+                    <th>Payment Review</th>
                     <th className="inline-admindashboard-139">
                       Current Status
                     </th>
@@ -1013,7 +959,13 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((o) => (
+                  {orders.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="inline-admindashboard-142">
+                        No orders have been placed yet.
+                      </td>
+                    </tr>
+                  ) : orders.map((o) => (
                     <tr key={o.id} className="inline-admindashboard-141">
                       <td className="inline-admindashboard-142">#{o.id}</td>
                       <td className="inline-admindashboard-143">
@@ -1030,7 +982,25 @@ export default function AdminDashboard() {
                         {formatCurrency(o.total, 0)}
                       </td>
                       <td className="inline-admindashboard-148">
-                        {o.paymentMethod}
+                        <div>{o.paymentMethod}</div>
+                        {o.gcashReference && (
+                          <small>Ref: {o.gcashReference}</small>
+                        )}
+                      </td>
+                      <td>
+                        <div>{o.paymentStatus || "Pending"}</div>
+                        {o.paymentMethod === "GCash" &&
+                          o.paymentStatus !== "Paid" && (
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() =>
+                                updateOrderPaymentStatus(o.id, "Paid")
+                              }
+                            >
+                              Mark verified
+                            </button>
+                          )}
                       </td>
                       <td className="inline-admindashboard-149">
                         <span
@@ -1053,6 +1023,95 @@ export default function AdminDashboard() {
                           <option value="Completed">Completed</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== ADMIN PRODUCT REVIEWS ==================== */}
+        {adminTab === "reviews" && (
+          <div>
+            <h1 className="inline-admindashboard-152">Product Reviews</h1>
+            <p className="inline-admindashboard-153">
+              Reviews appear in the storefront immediately. Reply publicly or delete a review.
+            </p>
+            <div className="cyber-card-static inline-admindashboard-154">
+              <table className="inline-admindashboard-155">
+                <thead>
+                  <tr className="inline-admindashboard-156">
+                    <th>Product</th>
+                    <th>Customer</th>
+                    <th>Rating</th>
+                    <th>Review</th>
+                    <th>Store Reply</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminReviews.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="inline-admindashboard-157">
+                        No customer reviews yet.
+                      </td>
+                    </tr>
+                  ) : adminReviews.map((review) => (
+                    <tr key={review.id} className="inline-admindashboard-158">
+                      <td>{review.productName}</td>
+                      <td>
+                        <div>{review.userName}</div>
+                        <small>{review.email}</small>
+                      </td>
+                      <td>{review.rating} / 5</td>
+                      <td>
+                        <strong>{review.title}</strong>
+                        <div className="admin-review-comment">{review.comment}</div>
+                      </td>
+                      <td className="admin-review-reply-cell">
+                        <textarea
+                          rows={3}
+                          maxLength={2000}
+                          value={reviewReplyDrafts[review.id] ?? review.adminReply ?? ""}
+                          onChange={(event) =>
+                            setReviewReplyDrafts((prev) => ({
+                              ...prev,
+                              [review.id]: event.target.value,
+                            }))
+                          }
+                          placeholder="Write a public response"
+                          aria-label={`Reply to ${review.userName}'s review`}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          disabled={!String(reviewReplyDrafts[review.id] ?? review.adminReply ?? "").trim()}
+                          onClick={() =>
+                            replyToReview(
+                              review.id,
+                              String(reviewReplyDrafts[review.id] ?? review.adminReply ?? "").trim(),
+                            )
+                          }
+                        >
+                          Save reply
+                        </button>
+                      </td>
+                      <td className="admin-review-actions">
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          title="Delete review"
+                          aria-label={`Delete review by ${review.userName}`}
+                          onClick={() => {
+                            if (window.confirm("Delete this review permanently?")) {
+                              deleteReview(review.id);
+                            }
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1145,108 +1204,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ==================== 7. ADMIN 3D MODELS HUB ==================== */}
-        {adminTab === "models" && (
-          <div>
-            <div className="flex-between inline-admindashboard-174">
-              <div>
-                <h1 className="inline-admindashboard-175">
-                  3D Model Asset Matrix
-                </h1>
-                <p className="inline-admindashboard-176">
-                  Upload GLB/GLTF assets, inspect polygon counts, and assign 3D
-                  geometry to PC Builder slots.
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  setReplaceModelId(null);
-                  setModelName("");
-                  setModelProductAssign(products[0]?.name || "");
-                  setModelModalOpen(true);
-                }}
-                className="btn btn-primary"
-              >
-                <Upload size={16} /> Upload 3D Asset (GLB)
-              </button>
-            </div>
-
-            <div className="grid-cols-2 inline-admindashboard-177">
-              {models3d.map((model, index) => (
-                <div
-                  key={model._id || model.id || `${model.name || "model"}-${index}`}
-                  className="cyber-card-static inline-admindashboard-178"
-                >
-                  <div className="inline-admindashboard-179">
-                    <img
-                      src={model.thumbnail}
-                      alt={model.name}
-                      className="inline-admindashboard-180"
-                    />
-                    <div className="inline-admindashboard-181">
-                      <div className="flex-between">
-                        <span className="badge badge-cyan inline-admindashboard-182">
-                          {model.format}
-                        </span>
-                        <span className="inline-admindashboard-183">
-                          {model.fileSize}
-                        </span>
-                      </div>
-                      <h4 className="inline-admindashboard-184">
-                        {model.name}
-                      </h4>
-                      <div className="inline-admindashboard-185">
-                        Assigned To:{" "}
-                        <strong className="inline-admindashboard-186">
-                          {model.assignedProduct}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="inline-admindashboard-187">
-                    Geometry: {model.polygonCount} • PBR Materials Active
-                  </div>
-
-                  <div className="inline-admindashboard-188">
-                    <button
-                      onClick={() => setPreviewModel(model)}
-                      className="btn btn-secondary btn-sm inline-admindashboard-189"
-                    >
-                      <Eye size={13} /> Preview 3D Wireframe
-                    </button>
-                    <button
-                      onClick={() => {
-                        setReplaceModelId(model.id || model._id);
-                        setModelName(model.name);
-                        setModelProductAssign(model.assignedProduct || products[0]?.name || "");
-                        setModelModalOpen(true);
-                      }}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      Replace
-                    </button>
-                    <button
-                      onClick={() => {
-                        const id = model._id || model.id;
-                        if (!id) return;
-                        if (window.confirm(`Delete 3D model "${model.name}"?`)) {
-                          deleteModelAsset(id);
-                        }
-                      }}
-                      className="btn btn-danger btn-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ==================== 8. ADMIN ANALYTICS HUB ==================== */}
+        {/* ==================== 7. ADMIN ANALYTICS HUB ==================== */}
         {adminTab === "analytics" && (
           <div>
             <h1 className="inline-admindashboard-190">
@@ -1329,42 +1287,76 @@ export default function AdminDashboard() {
         {adminTab === "compatibility" && (
           <div>
             <h1 className="inline-admindashboard-211">
-              Compatibility Engine Matrix
+              Compatibility Data & Build Check
             </h1>
             <p className="inline-admindashboard-212">
-              Define socket clearance rules, GPU length constraints, and PSU
-              wattage safety factors.
+              Audit the actual catalog fields used by the builder and review its current compatibility results.
             </p>
 
-            <div className="inline-admindashboard-213">
-              {[
-                {
-                  rule: "Socket AM5 Verification",
-                  desc: "Validates AMD Ryzen 7000/9000 against X670E, B650, and X870 motherboards.",
-                  status: "Active",
-                },
-                {
-                  rule: "LGA1851 / LGA1700 Check",
-                  desc: "Ensures Arrow Lake & Raptor Lake coolers and mounts align precisely.",
-                  status: "Active",
-                },
-                {
-                  rule: "ATX 3.0 12V-2x6 Power Overhead Rule",
-                  desc: "Calculates +20% overhead margin for RTX 5090 600W transient spikes.",
-                  status: "Active",
-                },
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  className="cyber-card-static inline-admindashboard-214"
-                >
-                  <div>
-                    <div className="inline-admindashboard-215">{item.rule}</div>
-                    <div className="inline-admindashboard-216">{item.desc}</div>
-                  </div>
-                  <span className="badge badge-green">{item.status}</span>
-                </div>
-              ))}
+            <div className="admin-audit-stats">
+              <div className="cyber-card-static">
+                <span>Catalog items checked</span>
+                <strong>{compatibilityAudit.length}</strong>
+              </div>
+              <div className="cyber-card-static">
+                <span>Complete compatibility data</span>
+                <strong>{compatibilityAudit.length - compatibilityDataIssues.length}</strong>
+              </div>
+              <div className="cyber-card-static">
+                <span>Items needing specifications</span>
+                <strong>{compatibilityDataIssues.length}</strong>
+              </div>
+            </div>
+
+            <div className="cyber-card-static admin-live-compatibility">
+              <div className="flex-between">
+                <h3>Current Builder Result</h3>
+                <button className="btn btn-secondary btn-sm" onClick={() => setCurrentPage("builder")}>
+                  Open PC Builder
+                </button>
+              </div>
+              {Object.values(builderConfig).some(Boolean) ? (
+                <>
+                  {(() => {
+                    const hasErrors = compatibilityStatus.issues.some((issue) => issue.type === "error");
+                    const hasWarnings = compatibilityStatus.issues.some((issue) => issue.type === "warning");
+                    return (
+                      <span className={`badge ${hasErrors ? "badge-red" : hasWarnings ? "badge-amber" : "badge-green"}`}>
+                        {hasErrors ? "Issues found" : hasWarnings ? "More data needed" : "Verified"}
+                      </span>
+                    );
+                  })()}
+                  <ul>
+                    {compatibilityStatus.passes.map((pass, index) => <li key={`pass-${index}`}>{pass}</li>)}
+                    {compatibilityStatus.issues.map((issue, index) => <li className="admin-compatibility-issue" key={`issue-${index}`}>{issue.message}</li>)}
+                  </ul>
+                </>
+              ) : (
+                <p>No build is configured yet. Open PC Builder to run a live compatibility check.</p>
+              )}
+            </div>
+
+            <div className="cyber-card-static admin-compatibility-audit">
+              <h3>Catalog Specification Audit</h3>
+              {compatibilityDataIssues.length ? (
+                <table>
+                  <thead>
+                    <tr><th>Product</th><th>Category</th><th>Missing compatibility data</th><th /></tr>
+                  </thead>
+                  <tbody>
+                    {compatibilityDataIssues.map((product) => (
+                      <tr key={product.id}>
+                        <td>{product.name}</td>
+                        <td>{product.category}</td>
+                        <td>{product.missingCompatibilityFields.join(", ")}</td>
+                        <td><button className="btn btn-secondary btn-sm" onClick={() => { setAdminTab("products"); handleOpenEditProduct(product); }}>Edit specs</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p>All catalog products have the compatibility fields required by their category.</p>
+              )}
             </div>
           </div>
         )}
@@ -1373,31 +1365,44 @@ export default function AdminDashboard() {
         {adminTab === "recommendations" && (
           <div>
             <h1 className="inline-admindashboard-217">
-              AI Component Recommendations
+              Component Recommendation Preview
             </h1>
             <p className="inline-admindashboard-218">
-              Configure smart upsell pairings and bottleneck prevention
-              triggers.
+              Preview compatible products from the live catalog using the builder’s recommendation weights.
             </p>
 
-            <div className="cyber-card-static inline-admindashboard-219">
-              <h3 className="inline-admindashboard-220">
-                Active Recommendation Triggers
-              </h3>
-              <ul className="inline-admindashboard-221">
-                <li>
-                  ⚡ <strong>When RTX 5090 Selected:</strong> Recommend 1200W
-                  Titanium PSU + 360mm AIO Liquid Cooler.
-                </li>
-                <li>
-                  ⚡ <strong>When Ryzen 7 7800X3D Selected:</strong> Recommend
-                  32GB DDR5-6000 CL30 Low-Latency Memory.
-                </li>
-                <li>
-                  ⚡ <strong>When Dual-Chamber Chassis Selected:</strong>{" "}
-                  Recommend 3-Pack Interlocking Infinity Mirror Fans.
-                </li>
-              </ul>
+            <div className="admin-recommendation-layout">
+              <div className="cyber-card-static admin-recommendation-controls">
+                <label className="form-label" htmlFor="admin-recommendation-slot">Component slot</label>
+                <select id="admin-recommendation-slot" className="form-control" value={recommendationSlot} onChange={(event) => setRecommendationSlot(event.target.value)}>
+                  {CATEGORIES.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                </select>
+                {[
+                  ["budget", "Budget and value"],
+                  ["performance", "Performance"],
+                  ["upgradability", "Upgrade potential"],
+                ].map(([key, label]) => (
+                  <label className="admin-recommendation-weight" key={key}>
+                    <span>{label}</span>
+                    <strong>{priorityProfile[key]}%</strong>
+                    <input type="range" min="0" max="100" value={priorityProfile[key]} onChange={(event) => setPriorityProfile((previous) => ({ ...previous, [key]: Number(event.target.value) }))} />
+                  </label>
+                ))}
+              </div>
+              <div className="admin-recommendation-results">
+                {recommendationProducts.length ? recommendationProducts.map((product) => (
+                  <article className="cyber-card-static admin-recommendation-product" key={product.id}>
+                    <div>
+                      <strong>{product.name}</strong>
+                      <span>{product.recommendationReason}</span>
+                      <small>{formatCurrency(product.price, 0)} · Match score {product.recommendationScore}/100</small>
+                    </div>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setBuilderSlot(recommendationSlot, product); setCurrentPage("builder"); }}>
+                      Use in builder
+                    </button>
+                  </article>
+                )) : <div className="cyber-card-static">No compatible products found for this slot.</div>}
+              </div>
             </div>
           </div>
         )}
@@ -1637,128 +1642,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ==================== 3D MODEL PREVIEW MODAL ==================== */}
-      {previewModel && (
-        <div className="modal-overlay" onClick={() => setPreviewModel(null)}>
-          <div
-            className="modal-content inline-admindashboard-230"
-            style={{ maxWidth: "900px", height: "560px" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex-between inline-admindashboard-231">
-              <h3 className="inline-admindashboard-232">
-                {previewModel.name}
-              </h3>
-              <button
-                onClick={() => setPreviewModel(null)}
-                className="btn-icon"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ width: "100%", height: "470px", marginTop: "12px" }}>
-              <Canvas camera={{ position: [2.5, 1.6, 3.2], fov: 35 }}>
-                <ambientLight intensity={1.3} />
-                <directionalLight position={[4, 5, 3]} intensity={1.8} />
-                <group rotation={[0.2, -0.8, 0]}>
-                  <PreviewModel url={previewModel.url} />
-                </group>
-                <gridHelper args={[8, 16, "#1dd3f8", "#123143"]} position={[0, -1.1, 0]} />
-                <Environment preset="city" />
-                <OrbitControls enablePan={false} minDistance={1.5} maxDistance={8} />
-              </Canvas>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== 3D MODEL UPLOAD MODAL ==================== */}
-      {modelModalOpen && (
-        <div className="modal-overlay" onClick={() => setModelModalOpen(false)}>
-          <div
-            className="modal-content inline-admindashboard-230"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex-between inline-admindashboard-231">
-              <h3 className="inline-admindashboard-232">
-                Upload 3D Asset (GLB/GLTF)
-              </h3>
-              <button
-                onClick={closeModelModal}
-                className="btn-icon"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handleUpload3DModel}>
-              <div className="form-group">
-                <label className="form-label">Asset Title</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={modelName}
-                  onChange={(e) => setModelName(e.target.value)}
-                  placeholder="e.g. Lian Li O11 Vision Chassis GLB"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Assign to Product SKU</label>
-                <select
-                  className="form-control"
-                  value={modelProductAssign}
-                  onChange={(e) => setModelProductAssign(e.target.value)}
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.name}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">3D Model File</label>
-                <input
-                  type="file"
-                  className="form-control"
-                  accept=".glb,.gltf,.obj,model/gltf-binary,model/gltf+json,model/obj"
-                  onChange={(e) => setModelFile(e.target.files?.[0] || null)}
-                  required
-                />
-                <small className="form-hint">
-                  Files are stored as model assets in MongoDB. Keep files under
-                  10MB.
-                </small>
-              </div>
-
-              <div className="inline-admindashboard-233">
-                <Upload
-                  size={32}
-                  color="var(--neon-cyan)"
-                  className="inline-admindashboard-234"
-                />
-                <div className="inline-admindashboard-235">
-                  Drag & Drop GLB, GLTF, or OBJ 3D Model Here
-                </div>
-                <div className="inline-admindashboard-236">
-                  Maximum 50MB with embedded PBR textures.
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary inline-admindashboard-237"
-              >
-                {replaceModelId ? "Replace 3D Model Asset" : "Register 3D Model Asset"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

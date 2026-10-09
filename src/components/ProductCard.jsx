@@ -20,7 +20,11 @@ export default function ProductCard({ product, isPrebuilt = false }) {
     addToCompare,
     setActiveProductModal,
     requireAuth,
+    reviews,
+    getProductReviewSummary,
   } = useApp();
+  const reviewSummary = getProductReviewSummary(product);
+  const latestReview = reviews.find((review) => review.productId === product.id);
   const isWishlisted = wishlist.includes(product.id);
   const isCompared = compareList.includes(product.id);
   const handleAddToCart = (e) => {
@@ -146,15 +150,25 @@ export default function ProductCard({ product, isPrebuilt = false }) {
           </span>
           <div className="inline-productcard-14">
             <Star size={13} fill="#fbbf24" color="#fbbf24" />
-            <span className="inline-productcard-15">{product.rating}</span>
+            <span className="inline-productcard-15">
+              {reviewSummary.rating || "New"}
+            </span>
             <span className="inline-productcard-16">
-              ({product.reviewsCount})
+              ({reviewSummary.reviewsCount})
             </span>
           </div>
         </div>
 
         {/* Title */}
         <h4 className="inline-productcard-17">{product.name}</h4>
+
+        {latestReview && (
+          <div className="product-card__review" aria-label="Latest customer review">
+            <strong>{latestReview.title}</strong>
+            <p>{latestReview.comment}</p>
+            <span>Reviewed by {latestReview.userName}</span>
+          </div>
+        )}
 
         {/* Spec snippet */}
         <div className="inline-productcard-18">

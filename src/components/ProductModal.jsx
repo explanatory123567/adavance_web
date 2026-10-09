@@ -26,10 +26,25 @@ export default function ProductModal() {
     setBuilderSlot,
     setCurrentPage,
     requireAuth,
+    reviews,
+    myReviews,
+    submitReview,
+    getProductReviewSummary,
   } = useApp();
   const [quantity, setQuantity] = useState(1);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   if (!activeProductModal) return null;
   const product = activeProductModal;
+  const reviewSummary = getProductReviewSummary(product);
+  const productReviews = reviews.filter((review) => review.productId === product.id);
+  const ownReview = myReviews.find((review) => review.productId === product.id);
+  const productSpecs =
+    product.category === "case"
+      ? { ...product.specs, includedFans: "Free fans included" }
+      : product.specs;
   const isWishlisted = wishlist.includes(product.id);
   const handleClose = () => {
     setActiveProductModal(null);
@@ -40,7 +55,12 @@ export default function ProductModal() {
   };
   const handleBuyNow = () => {
     if (!requireAuth(null, "proceed to direct checkout")) return;
-    addToCart(product, quantity);
+    const cartItemId = addToCart(product, quantity, null, {
+      checkoutOnly: true,
+      notificationTitle: "Ready for Checkout",
+      notificationMessage: `${product.name} is ready for checkout.`,
+    });
+    if (!cartItemId) return;
     setActiveProductModal(null);
     setCurrentPage("checkout");
   };
@@ -49,6 +69,20 @@ export default function ProductModal() {
       setBuilderSlot(product.category, product);
       setActiveProductModal(null);
       setCurrentPage("builder");
+    }
+  };
+  const handleReviewSubmit = async (event) => {
+    event.preventDefault();
+    setReviewSubmitting(true);
+    const submittedReview = await submitReview(product, {
+      rating: reviewRating,
+      title: reviewTitle,
+      comment: reviewComment,
+    });
+    setReviewSubmitting(false);
+    if (submittedReview) {
+      setReviewTitle("");
+      setReviewComment("");
     }
   };
   return (
@@ -140,9 +174,9 @@ export default function ProductModal() {
               <div className="product-modal__rating-row">
                 <div className="product-modal__rating">
                   <Star size={15} fill="#fbbf24" color="#fbbf24" />
-                  <strong>{product.rating}</strong>
+                  <strong>{reviewSummary.rating || "New"}</strong>
                   <span className="product-modal__muted">
-                    ({product.reviewsCount} verified reviews)
+                    ({reviewSummary.reviewsCount} reviews)
                   </span>
                 </div>
                 <span className="product-modal__separator">|</span>
@@ -240,7 +274,7 @@ export default function ProductModal() {
           </div>
 
           {/* Specifications Table Section */}
-          {product.specs && (
+          {productSpecs && (
             <div className="product-modal__specifications">
               <h3 className="product-modal__specifications-title">
                 <SlidersHorizontal size={18} color="var(--neon-cyan)" />
@@ -248,10 +282,12 @@ export default function ProductModal() {
               </h3>
 
               <div className="product-modal__spec-grid">
-                {Object.entries(product.specs).map(([key, val]) => (
+                {Object.entries(productSpecs).map(([key, val]) => (
                   <div key={key} className="product-modal__spec-row">
                     <span className="product-modal__spec-key">
-                      {key.replace(/([A-Z])/g, " $1")}
+                      {key === "includedFans"
+                        ? "Included Fans"
+                        : key.replace(/([A-Z])/g, " $1")}
                     </span>
                     <span className="product-modal__spec-value">{val}</span>
                   </div>
@@ -259,6 +295,118 @@ export default function ProductModal() {
               </div>
             </div>
           )}
+
+          <section className="product-reviews" aria-labelledby="product-reviews-title">
+            <div className="product-reviews__heading">
+              <div>
+                <h3 id="product-reviews-title">Customer Reviews</h3>
+                <span>{reviewSummary.reviewsCount} reviews</span>
+              </div>
+              {reviewSummary.rating > 0 && (
+                <div className="product-reviews__average">
+                  <Star size={16} fill="#fbbf24" color="#fbbf24" />
+                  <strong>{reviewSummary.rating}</strong>
+                </div>
+              )}
+            </div>
+
+            {userRole === "user" && ownReview ? (
+              <p className="product-reviews__notice">
+                Your review is live.
+              </p>
+            ) : userRole === "user" ? (
+              <form className="product-review-form" onSubmit={handleReviewSubmit}>
+                <label className="product-review-form__label">Your rating</label>
+                <div className="product-review-form__stars" role="radiogroup" aria-label="Rating">
+                  {Array.from({ length: 5 }, (_, index) => {
+                    const rating = index + 1;
+                    return (
+                      <button
+                        type="button"
+                        key={rating}
+                        role="radio"
+                        aria-checked={reviewRating === rating}
+                        aria-label={`${rating} star${rating === 1 ? "" : "s"}`}
+                        onClick={() => setReviewRating(rating)}
+                      >
+                        <Star
+                          size={20}
+                          fill={rating <= reviewRating ? "#fbbf24" : "none"}
+                          color="#fbbf24"
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                <label className="product-review-form__label" htmlFor="product-review-title">
+                  Review title
+                </label>
+                <input
+                  id="product-review-title"
+                  className="form-control"
+                  value={reviewTitle}
+                  onChange={(event) => setReviewTitle(event.target.value)}
+                  maxLength={100}
+                  required
+                />
+                <label className="product-review-form__label" htmlFor="product-review-comment">
+                  Your review
+                </label>
+                <textarea
+                  id="product-review-comment"
+                  className="form-control product-review-form__comment"
+                  value={reviewComment}
+                  onChange={(event) => setReviewComment(event.target.value)}
+                  minLength={10}
+                  maxLength={2000}
+                  required
+                />
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={reviewSubmitting}
+                >
+                  {reviewSubmitting ? "Submitting..." : "Submit review"}
+                </button>
+              </form>
+            ) : userRole === "guest" ? (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm product-reviews__login"
+                onClick={() => requireAuth(null, "submit a product review")}
+              >
+                Sign in to write a review
+              </button>
+            ) : null}
+
+            {productReviews.length ? (
+              <div className="product-reviews__list">
+                {productReviews.map((review) => (
+                  <article key={review.id} className="product-review">
+                    <div className="product-review__meta">
+                      <strong>{review.userName}</strong>
+                      <span>{review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ""}</span>
+                    </div>
+                    <div className="product-review__stars" aria-label={`${review.rating} out of 5 stars`}>
+                      {Array.from({ length: review.rating }, (_, index) => (
+                        <Star key={index} size={13} fill="#fbbf24" color="#fbbf24" />
+                      ))}
+                    </div>
+                    <h4>{review.title}</h4>
+                    <p>{review.comment}</p>
+                    {review.adminReply && (
+                      <div className="product-review__reply">
+                        <strong>Store reply</strong>
+                        <p>{review.adminReply}</p>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="product-reviews__empty">No published reviews yet.</p>
+            )}
+          </section>
         </div>
       </div>
     </div>

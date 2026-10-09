@@ -31,6 +31,27 @@
   font-weight: 800;
 }
 
+
+.cart-select-all {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.cart-select-all input,
+.cart-item-select {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  accent-color: var(--neon-cyan);
+}
+
+.cart-item-select {
+  margin-right: 2px;
+}
 .inline-cartpage-5 {
   padding: 60px 20px;
   text-align: center;

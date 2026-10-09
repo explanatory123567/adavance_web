@@ -32,6 +32,11 @@
 .gcash-payment-panel small {
   color: var(--text-muted);
 }
+.gcash-verification-note {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
 .checkout-address-link {
   margin-top: 7px;
   color: var(--neon-cyan);

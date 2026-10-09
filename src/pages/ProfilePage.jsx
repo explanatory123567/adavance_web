@@ -10,6 +10,7 @@ import {
   Bell,
   Key,
   MapPin,
+  MessageCircle,
 } from "lucide-react";
 export default function ProfilePage() {
   const {
@@ -19,10 +20,15 @@ export default function ProfilePage() {
     addresses,
     authUser,
     updateProfile,
+    connectDiscord,
+    disconnectDiscord,
     addAddress,
     logout,
     setCurrentPage,
     showToast,
+    notifications,
+    markNotificationRead,
+    markAllNotificationsRead,
   } = useApp();
   const [activeTab, setActiveTab] = useState("account"); // 'account' | 'security' | 'notifications' | 'addresses'
 
@@ -47,7 +53,7 @@ export default function ProfilePage() {
   const [name, setName] = useState(authUser?.name || "");
   const [email, setEmail] = useState(authUser?.email || "");
   const [gamerTag, setGamerTag] = useState(authUser?.username || "");
-  const [discordTag, setDiscordTag] = useState("");
+  const [discordBusy, setDiscordBusy] = useState(false);
   const [addressFormOpen, setAddressFormOpen] = useState(false);
   const [newAddress, setNewAddress] = useState({
     label: "",
@@ -109,6 +115,26 @@ export default function ProfilePage() {
       );
     } catch (error) {
       showToast("Profile update failed", error.message, "warning");
+    }
+  };
+  const handleConnectDiscord = async () => {
+    setDiscordBusy(true);
+    try {
+      await connectDiscord();
+    } catch (error) {
+      showToast("Discord connection failed", error.message, "warning");
+      setDiscordBusy(false);
+    }
+  };
+  const handleDisconnectDiscord = async () => {
+    setDiscordBusy(true);
+    try {
+      await disconnectDiscord();
+      showToast("Discord disconnected", "Your Discord account was unlinked.", "success");
+    } catch (error) {
+      showToast("Discord disconnect failed", error.message, "warning");
+    } finally {
+      setDiscordBusy(false);
     }
   };
   return (
@@ -299,14 +325,34 @@ export default function ProfilePage() {
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">Discord Integration</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={discordTag}
-                      onChange={(e) => setDiscordTag(e.target.value)}
-                    />
+                  <div className="form-group discord-profile-link">
+                    <label className="form-label">Discord Account</label>
+                    <span className="discord-profile-status">
+                      {authUser?.discordUsername
+                        ? `Connected as ${authUser.discordUsername}`
+                        : "Not connected"}
+                    </span>
+                    {authUser?.discordId ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={handleDisconnectDiscord}
+                        disabled={discordBusy}
+                      >
+                        <MessageCircle size={15} />
+                        {discordBusy ? "Please wait..." : "Disconnect Discord"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={handleConnectDiscord}
+                        disabled={discordBusy}
+                      >
+                        <MessageCircle size={15} />
+                        {discordBusy ? "Connecting..." : "Connect Discord"}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -479,40 +525,43 @@ export default function ProfilePage() {
 
             {activeTab === "notifications" && (
               <div>
-                <h3 className="inline-profilepage-39">
-                  Cyber Alert Notifications
-                </h3>
-
-                <div className="inline-profilepage-40">
-                  {[
-                    {
-                      label: "GeForce RTX 50-Series Drop Alerts",
-                      desc: "Instant push notifications for Founders Edition restocks.",
-                    },
-                    {
-                      label: "Order Telemetry Updates",
-                      desc: "SMS tracking for lab assembly & carrier delivery.",
-                    },
-                    {
-                      label: "Discord VIP Exclusive Deals",
-                      desc: "Special community promo codes and private sales.",
-                    },
-                  ].map((item, idx) => (
-                    <label key={idx} className="inline-profilepage-41">
-                      <div>
-                        <div className="inline-profilepage-42">
-                          {item.label}
-                        </div>
-                        <div className="inline-profilepage-43">{item.desc}</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        defaultChecked
-                        className="inline-profilepage-44"
-                      />
-                    </label>
-                  ))}
+                <div className="profile-notifications__heading">
+                  <h3 className="inline-profilepage-39">Notifications</h3>
+                  <button
+                    type="button"
+                    onClick={markAllNotificationsRead}
+                    disabled={!notifications.some((item) => !item.isRead)}
+                  >
+                    Mark all read
+                  </button>
                 </div>
+                {notifications.length ? (
+                  <div className="inline-profilepage-40">
+                    {notifications.map((notification) => (
+                      <button
+                        type="button"
+                        key={notification.id}
+                        className={`profile-notification${notification.isRead ? " is-read" : ""}`}
+                        onClick={() => {
+                          markNotificationRead(notification.id);
+                          setCurrentPage(notification.page || "home");
+                        }}
+                      >
+                        <strong>{notification.title}</strong>
+                        <span>{notification.message}</span>
+                        <time>
+                          {notification.createdAt
+                            ? new Date(notification.createdAt).toLocaleString()
+                            : "Just now"}
+                        </time>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="profile-notifications__empty">
+                    You’re all caught up.
+                  </p>
+                )}
               </div>
             )}
           </div>

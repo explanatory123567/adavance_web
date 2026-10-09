@@ -245,12 +245,39 @@ footer input::placeholder {
 }
 
 .inline-footer-28 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-subtle);
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 11px;
   color: var(--text-secondary);
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.inline-footer-28:hover,
+.inline-footer-28:focus-visible {
+  color: var(--text-main);
+  border-color: var(--accent-cyan);
+  background: var(--accent-cyan-subtle);
+  transform: translateY(-1px);
+}
+
+.inline-footer-28:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 3px;
+}
+
+.footer-admin-login {
+  margin-top: 10px;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .inline-footer-29 {

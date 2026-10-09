@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./PCBuilderPage.css";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/catalogMeta";
@@ -24,7 +24,6 @@ import {
   HardDrive,
   Box,
   Snowflake,
-  Wind,
   X,
   Share2,
   Printer,
@@ -44,39 +43,47 @@ const iconMap = {
   psu: Zap,
   case: Box,
   cooler: Snowflake,
-  fans: Wind,
 };
 
-const motherboardPosition = [0, 0, -0.62];
+const motherboardPosition = [0, 0, 0.15];
+const referenceModelScale = 0.62;
+const referenceModelOrigin = [
+  -8.538 * referenceModelScale,
+  0.392 * referenceModelScale,
+  -0.798 * referenceModelScale,
+];
 
 const partPositions = {
   motherboard: motherboardPosition,
-  cpu: [0, 0, 0],
-  cooler: [0, 0, 0],
+  cpu: [0.491, 0.605, -0.567],
+  cooler: [-0.1, 1.25, 0.15],
   ram: [0, 0, 0],
   gpu: [0, 0, 0],
   storage: [0, 0, 0],
   psu: [0, -1.28, 0.12],
-  fans: [0, 0.25, 0.62],
 };
 
-const motherboardOffsets = {
-  cpu: [0, 0.18, 0.12],
-  cooler: [0, 0.38, 0.12],
-  ram: [-0.55, 0.15, 0.12],
-  storage: [0.6, 0.18, 0.1],
-  gpu: [0, -0.2, 0.28],
+const motherboardSlots = {
+  cpu: [[0, 0.18, 0.12]],
+  cooler: [[0, 0.38, 0.12]],
+  ram: [
+    [-0.55, 0.15, 0.12],
+    [-0.35, 0.15, 0.12],
+    [0.35, 0.15, 0.12],
+    [0.55, 0.15, 0.12],
+  ],
+  storage: [[0.6, 0.18, 0.1], [0.82, 0.18, 0.1], [-0.6, 0.18, 0.1]],
+  gpu: [[0, -0.2, 0.28], [0, -0.42, 0.28]],
 };
 
 const partModels = {
   motherboard: { size: [1.7, 0.08, 1.25], color: "#1d4d65" },
   cpu: { size: [0.3, 0.15, 0.3], color: "#d6dbe1" },
-  cooler: { size: [0.38, 0.2, 0.38], color: "#7dd3fc" },
+  cooler: { size: [0.48, 0.62, 0.48], color: "#7dd3fc" },
   gpu: { size: [1.5, 0.18, 0.5], color: "#22d3ee" },
   ram: { size: [0.12, 0.65, 0.28], color: "#a78bfa" },
   storage: { size: [0.28, 0.12, 0.4], color: "#fbbf24" },
   psu: { size: [0.9, 0.24, 0.6], color: "#64748b" },
-  fans: { size: [0.24, 0.24, 0.1], color: "#34d399" },
 };
 
 const partColors = {
@@ -87,29 +94,203 @@ const partColors = {
   ram: "#a78bfa",
   storage: "#fbbf24",
   psu: "#64748b",
-  fans: "#34d399",
 };
 
-function GltfPart({ url, position, scale = 0.7, rotation = [0, 0, 0] }) {
+const defaultModelUrls = {
+  cpu: "/models/reference-pc/cpu_ryzen_5_3600.glb",
+  gpu: "/models/reference-pc/gpu.glb",
+  motherboard: "/models/reference-pc/motherboard.glb",
+  ram: "/models/reference-pc/ram.glb",
+  storage: "/models/reference-pc/storage.glb",
+  psu: "/models/reference-pc/psu.glb",
+  case: "/models/case/case.glb",
+  cooler: "/models/reference-pc/cooler.glb",
+};
+
+const defaultModelScales = {
+  motherboard: 0.68,
+  cpu: 0.0101,
+  cooler: 0.5,
+  ram: 0.85,
+  gpu: 0.48,
+  storage: 0.5,
+  psu: 0.52,
+  case: 0.48,
+};
+
+const partTransforms = {
+  motherboard: {
+    position: [0, 0, 0.15],
+    rotation: [0, 0, 0],
+    scale: 0.68,
+  },
+};
+
+function GltfPart({
+  url,
+  position,
+  scale = 0.7,
+  rotation = [0, 0, 0],
+  centerModel = true,
+}) {
   const { scene } = useGLTF(url);
+  const model = useMemo(() => {
+    const cloned = scene.clone(true);
+    if (centerModel) {
+      const box = new THREE.Box3().setFromObject(cloned);
+      const center = box.getCenter(new THREE.Vector3());
+      cloned.position.sub(center);
+    }
+    return cloned;
+  }, [scene, centerModel]);
+
   return (
-    <primitive
-      object={scene.clone()}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-    />
+    <group position={position} rotation={rotation} scale={scale}>
+      <primitive object={model} />
+    </group>
   );
 }
 
-function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
+function DraggableGroup({
+  position,
+  rotation,
+  children,
+  disabled = false,
+  snapPositions,
+  snapRadius = 0.4,
+  onDragStart,
+  onDragEnd,
+}) {
+  const groupRef = useRef();
+
+  const handlePointerOver = (event) => {
+    event.stopPropagation();
+    const materials = Array.isArray(event.object.material)
+      ? event.object.material
+      : [event.object.material];
+    materials.forEach((material) => {
+      if (!material?.emissive) return;
+      material.userData.hoverEmissive = material.emissive.clone();
+      material.userData.hoverEmissiveIntensity = material.emissiveIntensity;
+      material.emissive.set("#facc15");
+      material.emissiveIntensity = Math.max(material.emissiveIntensity, 0.22);
+    });
+  };
+
+  const handlePointerOut = (event) => {
+    const materials = Array.isArray(event.object.material)
+      ? event.object.material
+      : [event.object.material];
+    materials.forEach((material) => {
+      if (!material?.emissive || !material.userData.hoverEmissive) return;
+      material.emissive.copy(material.userData.hoverEmissive);
+      material.emissiveIntensity = material.userData.hoverEmissiveIntensity;
+      delete material.userData.hoverEmissive;
+      delete material.userData.hoverEmissiveIntensity;
+    });
+  };
+
+  const clampToBoardArea = (x, z) => {
+    const maxX = 2.9;
+    const maxZ = 2.1;
+    const clampedX = THREE.MathUtils.clamp(x, -maxX, maxX);
+    const clampedZ = THREE.MathUtils.clamp(z, -maxZ, maxZ);
+    return [clampedX, 0, clampedZ];
+  };
+
+  const handlePointerDown = (event) => {
+    if (disabled) return;
+    event.stopPropagation();
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.15);
+    const point = new THREE.Vector3();
+    if (event.ray.intersectPlane(plane, point)) {
+      groupRef.current.parent?.worldToLocal(point);
+      const [x, , z] = clampToBoardArea(point.x, point.z);
+      groupRef.current.userData.offset = new THREE.Vector3(x, 0, z).sub(groupRef.current.position);
+      groupRef.current.userData.isDragging = true;
+      event.target.setPointerCapture?.(event.pointerId);
+      if (onDragStart) onDragStart();
+    }
+  };
+
+  const handlePointerMove = (event) => {
+    if (disabled || !groupRef.current?.userData.offset) return;
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.15);
+    const point = new THREE.Vector3();
+    if (event.ray.intersectPlane(plane, point)) {
+      groupRef.current.parent?.worldToLocal(point);
+      const [x, , z] = clampToBoardArea(point.x, point.z);
+      const nextPosition = new THREE.Vector3(x, 0, z).sub(groupRef.current.userData.offset);
+      groupRef.current.position.set(nextPosition.x, nextPosition.y, nextPosition.z);
+    }
+  };
+
+  const handlePointerUp = (event) => {
+    if (!groupRef.current?.userData.isDragging) return;
+    const group = groupRef.current;
+    if (snapPositions?.length) {
+      const nearestPosition = snapPositions.reduce((nearest, candidate) => {
+        const candidateDistance = (candidate[0] - group.position.x) ** 2 +
+          (candidate[2] - group.position.z) ** 2;
+        const nearestDistance = (nearest[0] - group.position.x) ** 2 +
+          (nearest[2] - group.position.z) ** 2;
+        return candidateDistance < nearestDistance ? candidate : nearest;
+      });
+      const distanceSquared =
+        (nearestPosition[0] - group.position.x) ** 2 +
+        (nearestPosition[2] - group.position.z) ** 2;
+      if (distanceSquared <= snapRadius ** 2) {
+        group.position.set(...nearestPosition);
+      }
+    }
+    delete group.userData.offset;
+    delete group.userData.isDragging;
+    event.target.releasePointerCapture?.(event.pointerId);
+    if (onDragEnd) onDragEnd();
+  };
+
+  return (
+    <group
+      ref={groupRef}
+      position={position}
+      rotation={rotation}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+      onContextMenu={(event) => {
+        event.nativeEvent?.preventDefault?.();
+      }}
+    >
+      {children}
+    </group>
+  );
+}
+
+function AssemblyPart({
+  category,
+  component,
+  rgbColor = "#67e8f9",
+  onSelect,
+  onDragStart,
+  onDragEnd,
+}) {
   if (!component) return null;
 
   let position;
   if (category === "motherboard") {
     position = motherboardPosition;
-  } else if (motherboardOffsets[category]) {
-    const mount = motherboardOffsets[category];
+  } else if (category === "cpu") {
+    position = partPositions.cpu;
+  } else if (category === "cooler") {
+    position = partPositions.cooler;
+  } else if (motherboardSlots[category]) {
+    const mount = motherboardSlots[category][0];
     position = [
       motherboardPosition[0] + mount[0],
       motherboardPosition[1] + mount[1],
@@ -120,25 +301,55 @@ function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
   }
 
   const isMotherboard = category === "motherboard";
-  const rotation = isMotherboard ? [Math.PI / 2, 0, 0] : [0, 0, 0];
+  const transform = partTransforms[category] || {
+    position,
+    rotation: [0, 0, 0],
+    scale: defaultModelScales[category] ?? 0.7,
+  };
+  const rotation = isMotherboard ? transform.rotation : [0, 0, 0];
+  const modelUrl = component.modelUrl || defaultModelUrls[category];
+  const usesReferenceModel =
+    category !== "cpu" && modelUrl?.startsWith("/models/reference-pc/");
+  const snapPositions = category === "cpu"
+    ? [position]
+    : motherboardSlots[category]?.map(([x, y, z]) => [
+        motherboardPosition[0] + x,
+        motherboardPosition[1] + y,
+        motherboardPosition[2] + z,
+      ]) || [position];
+  const groupPosition = usesReferenceModel
+    ? [0, 0, 0]
+    : isMotherboard ? transform.position : position;
 
-  if (component.modelUrl) {
+  if (modelUrl) {
     return (
-      <GltfPart
-        url={component.modelUrl}
-        position={position}
+      <DraggableGroup
+        position={groupPosition}
         rotation={rotation}
-      />
+        disabled={isMotherboard}
+        snapPositions={usesReferenceModel ? [[0, 0, 0]] : snapPositions}
+        onSelect={onSelect}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
+        <GltfPart
+          url={modelUrl}
+          position={usesReferenceModel ? referenceModelOrigin : [0, 0, 0]}
+          rotation={category === "cpu" ? [0, 0, Math.PI / 2] : [0, 0, 0]}
+          rgbColor={rgbColor}
+          scale={usesReferenceModel
+            ? referenceModelScale
+            : isMotherboard ? transform.scale : defaultModelScales[category] ?? 0.7}
+          centerModel={!usesReferenceModel}
+        />
+      </DraggableGroup>
     );
   }
 
   const preset = partModels[category];
   const color = preset?.color || partColors[category] || "#ffffff";
   const isGpu = category === "gpu";
-  const glowColor =
-    ["motherboard", "cooler", "ram", "fans"].includes(category)
-      ? rgbColor
-      : color;
+  const glowColor = rgbColor;
   const dimensions = preset?.size || (
     isGpu
       ? [1.5, 0.18, 0.5]
@@ -146,9 +357,41 @@ function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
         ? [0.12, 0.62, 0.28]
         : [0.55, 0.12, 0.45]
   );
+  if (category === "cpu") {
+    return (
+      <DraggableGroup
+        position={position}
+        rotation={rotation}
+        snapPositions={snapPositions}
+        onSelect={onSelect}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
+        <group>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[0.36, 0.055, 0.36]} />
+            <meshStandardMaterial color="#111827" metalness={0.48} roughness={0.42} />
+          </mesh>
+          <mesh position={[0, 0.043, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.29, 0.032, 0.29]} />
+            <meshStandardMaterial color="#cbd5e1" metalness={0.82} roughness={0.24} />
+          </mesh>
+          <Html center distanceFactor={5} className="pc-assembly-label">
+            CPU
+          </Html>
+        </group>
+      </DraggableGroup>
+    );
+  }
+
   if (category === "motherboard") {
     return (
-      <group position={position} rotation={rotation}>
+      <DraggableGroup
+        position={position}
+        rotation={rotation}
+        disabled
+        onSelect={onSelect}
+      >
         <mesh castShadow receiveShadow>
           <boxGeometry args={[1.7, 0.08, 1.25]} />
           <meshStandardMaterial
@@ -159,109 +402,81 @@ function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
             emissiveIntensity={0.22}
           />
         </mesh>
-      </group>
+      </DraggableGroup>
     );
   }
 
   return (
-    <group position={position} rotation={rotation}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={dimensions} />
-        <meshStandardMaterial
-          color={color}
-          metalness={0.55}
-          roughness={0.3}
-          emissive={glowColor}
-          emissiveIntensity={category === "gpu" ? 0.18 : 0.08}
-        />
-      </mesh>
-      <mesh position={[0, dimensions[1] / 2 + 0.012, 0]}>
-        <boxGeometry
-          args={[
-            Math.max(0.12, dimensions[0] * 0.55),
-            0.025,
-            Math.max(0.12, dimensions[2] * 0.55),
-          ]}
-        />
-        <meshStandardMaterial
-          color="#111827"
-          metalness={0.2}
-          roughness={0.65}
-        />
-      </mesh>
-      <Html center distanceFactor={5} className="pc-assembly-label">
-        {category.toUpperCase()}
-      </Html>
-    </group>
+    <DraggableGroup
+      position={position}
+      rotation={rotation}
+      snapPositions={snapPositions}
+      onSelect={onSelect}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
+      <group>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={dimensions} />
+          <meshStandardMaterial
+            color={color}
+            metalness={0.55}
+            roughness={0.3}
+            emissive={glowColor}
+            emissiveIntensity={category === "gpu" ? 0.18 : 0.08}
+          />
+        </mesh>
+        <mesh position={[0, dimensions[1] / 2 + 0.012, 0]}>
+          <boxGeometry
+            args={[
+              Math.max(0.12, dimensions[0] * 0.55),
+              0.025,
+              Math.max(0.12, dimensions[2] * 0.55),
+            ]}
+          />
+          <meshStandardMaterial
+            color="#111827"
+            metalness={0.2}
+            roughness={0.65}
+          />
+        </mesh>
+        <Html center distanceFactor={5} className="pc-assembly-label">
+          {category.toUpperCase()}
+        </Html>
+      </group>
+    </DraggableGroup>
   );
 }
 
-function AssemblyCase({ component, rgbColor = "#67e8f9" }) {
-  const color = component ? "#15283a" : "#263447";
+function AssemblyCase({ onSelect, rgbColor }) {
   return (
-    <group>
-      <mesh position={[0, 0, 0]} castShadow>
-        <boxGeometry args={[2.25, 3.2, 1.55]} />
-        <meshPhysicalMaterial
-          color={color}
-          metalness={0.7}
-          roughness={0.22}
-          transparent
-          opacity={0.32}
-          transmission={0.15}
-        />
-      </mesh>
-      <mesh position={[0, 0, -0.86]}>
-        <boxGeometry args={[2.05, 3, 0.04]} />
-        <meshStandardMaterial color="#07111d" metalness={0.2} roughness={0.6} />
-      </mesh>
-      <mesh position={[-1.12, 0, 0]}>
-        <boxGeometry args={[0.06, 3.1, 1.45]} />
-        <meshStandardMaterial color="#0b1624" metalness={0.8} roughness={0.3} />
-      </mesh>
-      <mesh position={[1.12, 0, 0]}>
-        <boxGeometry args={[0.06, 3.1, 1.45]} />
-        <meshStandardMaterial color="#0b1624" metalness={0.8} roughness={0.3} />
-      </mesh>
-      <mesh position={[0, 0.75, 0.76]}>
-        <boxGeometry args={[1.5, 0.12, 0.04]} />
-        <meshStandardMaterial
-          color={rgbColor}
-          emissive={rgbColor}
-          emissiveIntensity={1.9}
-          metalness={0.2}
-          roughness={0.3}
-        />
-      </mesh>
-      <mesh position={[0, -0.8, 0.76]}>
-        <boxGeometry args={[1.3, 0.12, 0.04]} />
-        <meshStandardMaterial
-          color={rgbColor}
-          emissive={rgbColor}
-          emissiveIntensity={1.5}
-          metalness={0.2}
-          roughness={0.3}
-        />
-      </mesh>
-      <pointLight position={[0, 0.2, 0.7]} intensity={18} color={rgbColor} />
-      <pointLight position={[0.9, -0.7, 0.2]} intensity={12} color={rgbColor} />
-      <pointLight position={[-0.9, 0.8, 0.2]} intensity={12} color={rgbColor} />
-    </group>
+    <DraggableGroup position={[0, 0, 0]} disabled onSelect={onSelect}>
+      <GltfPart
+        url="/models/pc-configurator-case.glb"
+        position={referenceModelOrigin}
+        scale={referenceModelScale}
+        centerModel={false}
+        rgbColor={rgbColor}
+      />
+    </DraggableGroup>
   );
 }
 
-function AssemblyCamera({ cameraView }) {
+function AssemblyCamera({ cameraView, controlsRef }) {
   const { camera } = useThree();
   useEffect(() => {
     const positions = {
-      front: [4.2, 2.4, 5.4],
-      inside: [3.2, 1.1, 3.6],
-      back: [-4.2, 2.2, -5.2],
+      front: [-4.2, 2.4, 5.4],
+      inside: [-3.2, 1.1, 3.6],
+      back: [4.2, 2.2, -5.2],
       top: [3.5, 5.8, 3.2],
     };
+    controlsRef.current?.reset();
+    controlsRef.current?.target.set(0, 0, 0);
     camera.position.set(...positions[cameraView]);
     camera.lookAt(0, 0, 0);
-  }, [camera, cameraView]);
+    controlsRef.current?.update();
+  }, [camera, cameraView, controlsRef]);
   return null;
 }
 
@@ -272,8 +487,10 @@ function PCAssemblyScene({
   zoomLevel,
   rotationAngle,
   rgbColor = "#67e8f9",
+  onSelectPart,
 }) {
   const groupRef = useRef();
+  const controlsRef = useRef();
   useEffect(() => {
     if (groupRef.current)
       groupRef.current.rotation.y = THREE.MathUtils.degToRad(
@@ -281,13 +498,21 @@ function PCAssemblyScene({
       );
   }, [rotationAngle]);
 
+  const disableCameraDrag = () => {
+    if (controlsRef.current) controlsRef.current.enabled = false;
+  };
+
+  const enableCameraDrag = () => {
+    if (controlsRef.current) controlsRef.current.enabled = true;
+  };
+
   return (
     <Canvas
       shadows
       camera={{ position: [4.2, 2.4, 5.4], fov: 42 }}
       className="pc-builder-canvas"
     >
-      <AssemblyCamera cameraView={cameraView} />
+      <AssemblyCamera cameraView={cameraView} controlsRef={controlsRef} />
       <ambientLight intensity={0.7} />
       <spotLight
         position={[4, 6, 5]}
@@ -297,16 +522,24 @@ function PCAssemblyScene({
         castShadow
       />
       <pointLight position={[-3, 1, 2]} intensity={18} color="#00d4ff" />
-      <group ref={groupRef} scale={zoomLevel}>
-        <AssemblyCase component={builderConfig.case} rgbColor={rgbColor} />
+      <group ref={groupRef} scale={zoomLevel * 0.78}>
+        {builderConfig.case && (
+          <AssemblyCase onSelect={() => onSelectPart("case")} />
+        )}
         {Object.entries(builderConfig).map(([category, component]) => {
-          const model = modelAssets?.find(
-            (asset) =>
-              asset.assignedProduct === component?.name &&
-              (asset.url || asset.modelUrl),
-          );
-          const renderableComponent = model
-            ? { ...component, modelUrl: model.url || model.modelUrl }
+          const usesBundledModel = ["cpu", "motherboard", "ram", "cooler"].includes(category);
+          const model = usesBundledModel
+            ? null
+            : modelAssets?.find(
+                (asset) =>
+                  asset.assignedProduct === component?.name &&
+                  (asset.url || asset.modelUrl),
+              );
+          const resolvedModelUrl = usesBundledModel
+            ? defaultModelUrls[category]
+            : model?.url || model?.modelUrl || defaultModelUrls[category];
+          const renderableComponent = resolvedModelUrl && component
+            ? { ...component, modelUrl: resolvedModelUrl }
             : component;
           return (
             category !== "case" && (
@@ -315,20 +548,30 @@ function PCAssemblyScene({
                 category={category}
                 component={renderableComponent}
                 rgbColor={rgbColor}
+                onSelect={() => onSelectPart(category)}
+                onDragStart={disableCameraDrag}
+                onDragEnd={enableCameraDrag}
               />
             )
           );
         })}
       </group>
+      <mesh rotation-x={-Math.PI / 2} position={[0, -1.8, 0]} receiveShadow onClick={(event) => event.stopPropagation()}>
+        <planeGeometry args={[120, 120]} />
+        <meshStandardMaterial color="#0a1626" metalness={0.2} roughness={0.9} />
+      </mesh>
       <gridHelper
-        args={[8, 16, "#164e63", "#0f2438"]}
-        position={[0, -1.65, 0]}
+        args={[120, 120, "#164e63", "#0f2438"]}
+        position={[0, -1.79, 0]}
       />
       <Environment preset="city" />
       <OrbitControls
-        enablePan={false}
-        minDistance={3.5}
-        maxDistance={9}
+        ref={controlsRef}
+        enablePan={true}
+        panSpeed={1.5}
+        minDistance={0.1}
+        maxDistance={Infinity}
+        enableDamping
         target={[0, 0, 0]}
       />
     </Canvas>
@@ -336,6 +579,7 @@ function PCAssemblyScene({
 }
 export default function PCBuilderPage() {
   const {
+    products,
     builderConfig,
     setBuilderSlot,
     clearBuilderSlot,
@@ -394,7 +638,81 @@ export default function PCBuilderPage() {
             0,
           ) / installedSlots.length,
         )
-      : 90;
+      : null;
+  const upgradeSignals = [
+    builderConfig.motherboard?.specs?.socket,
+    builderConfig.motherboard?.specs?.slots,
+    builderConfig.case?.specs?.gpuClearance,
+    builderConfig.psu?.wattage,
+    builderConfig.ram?.specs?.capacity,
+  ].filter(Boolean).length;
+  const coolingScore = builderConfig.case || builderConfig.cooler
+    ? Math.round(
+        (builderConfig.case ? 50 : 0) +
+          (builderConfig.cooler
+            ? Math.min(100, Number(builderConfig.cooler.performanceScore) || 60) / 2
+            : 0),
+      )
+    : null;
+  const compatibilityScore = installedSlots.length
+    ? Math.max(
+        0,
+        100 -
+          compatibilityStatus.issues.filter((issue) => issue.type === "error").length * 35 -
+          compatibilityStatus.issues.filter((issue) => issue.type === "warning").length * 15,
+      )
+    : null;
+  const compatibilityErrorCount = compatibilityStatus.issues.filter(
+    (issue) => issue.type === "error",
+  ).length;
+  const compatibilityWarningCount = compatibilityStatus.issues.filter(
+    (issue) => issue.type === "warning",
+  ).length;
+  const compatibilityVerified =
+    installedSlots.length > 0 &&
+    compatibilityErrorCount === 0 &&
+    compatibilityWarningCount === 0;
+  const powerEfficiencyScore = builderConfig.psu
+    ? Math.max(0, 100 - wattagePercentage)
+    : null;
+  const valueScores = installedSlots.flatMap(([category, component]) => {
+    const price = Number(component.price) || 0;
+    const performance = Number(component.performanceScore) || 0;
+    if (!price || !performance) return [];
+    const categoryProducts = products.filter(
+      (product) =>
+        product.category === category &&
+        Number(product.price) > 0 &&
+        Number(product.performanceScore) > 0,
+    );
+    const bestValue = Math.max(
+      ...categoryProducts.map(
+        (product) => Number(product.performanceScore) / Number(product.price),
+      ),
+      performance / price,
+    );
+    return [Math.round(((performance / price) / bestValue) * 100)];
+  });
+  const valueScore = valueScores.length
+    ? Math.round(valueScores.reduce((sum, score) => sum + score, 0) / valueScores.length)
+    : null;
+  const analyzerMetrics = [
+    { label: "Performance", value: averageScore },
+    { label: "Value", value: valueScore },
+    {
+      label: "Upgradability",
+      value: installedSlots.length ? Math.round((upgradeSignals / 5) * 100) : null,
+    },
+    { label: "Cooling", value: coolingScore },
+    { label: "Power Efficiency", value: powerEfficiencyScore },
+    { label: "Compatibility", value: compatibilityScore },
+  ].filter((metric) => metric.value !== null);
+  const analyzerScore = analyzerMetrics.length
+    ? Math.round(
+        analyzerMetrics.reduce((sum, metric) => sum + metric.value, 0) /
+          analyzerMetrics.length,
+      )
+    : null;
 
   // Viewport Presets
   const handleCameraPreset = (preset) => {
@@ -482,7 +800,7 @@ export default function PCBuilderPage() {
             <div className="flex-between inline-pcbuilderpage-10">
               <h3 className="inline-pcbuilderpage-11">Component Slots</h3>
               <span className="badge badge-green inline-pcbuilderpage-12">
-                {installedSlots.length} / 9 Mounted
+                {installedSlots.length} / {CATEGORIES.length} Mounted
               </span>
             </div>
 
@@ -604,6 +922,7 @@ export default function PCBuilderPage() {
                   zoomLevel={zoomLevel}
                   rotationAngle={rotationAngle}
                   rgbColor={rgbColor}
+                  onSelectPart={setActiveSlotPicker}
                 />
 
                 <div
@@ -890,39 +1209,52 @@ export default function PCBuilderPage() {
                 {/* Real-time Compatibility Matrix Status */}
                 <div
                   style={{
-                    background: compatibilityStatus.isCompatible
-                      ? "rgba(16, 185, 129, 0.08)"
-                      : "rgba(239, 68, 68, 0.1)",
-                    border: compatibilityStatus.isCompatible
-                      ? "1px solid rgba(16, 185, 129, 0.3)"
-                      : "1px solid rgba(239, 68, 68, 0.3)",
+                    background: compatibilityErrorCount
+                      ? "rgba(239, 68, 68, 0.1)"
+                      : compatibilityVerified
+                        ? "rgba(16, 185, 129, 0.08)"
+                        : "rgba(245, 158, 11, 0.08)",
+                    border: compatibilityErrorCount
+                      ? "1px solid rgba(239, 68, 68, 0.3)"
+                      : compatibilityVerified
+                        ? "1px solid rgba(16, 185, 129, 0.3)"
+                        : "1px solid rgba(245, 158, 11, 0.3)",
                     borderRadius: "var(--radius-md)",
                     padding: "12px",
                     marginBottom: "16px",
                   }}
                 >
                   <div className="inline-pcbuilderpage-53">
-                    {compatibilityStatus.isCompatible ? (
+                    {compatibilityErrorCount === 0 && compatibilityVerified ? (
                       <CheckCircle2 size={16} color="#34d399" />
                     ) : (
-                      <AlertTriangle size={16} color="#f87171" />
+                      <AlertTriangle size={16} color={compatibilityErrorCount ? "#f87171" : "#fbbf24"} />
                     )}
                     <span
                       style={{
                         fontSize: "12.5px",
                         fontWeight: 800,
-                        color: compatibilityStatus.isCompatible
-                          ? "#34d399"
-                          : "#f87171",
+                        color: compatibilityErrorCount
+                          ? "#f87171"
+                          : compatibilityVerified
+                            ? "#34d399"
+                            : "#fbbf24",
                       }}
                     >
-                      {compatibilityStatus.isCompatible
-                        ? "100% Real-Time Compatibility Verified"
-                        : "Compatibility Issues Detected"}
+                      {!installedSlots.length
+                        ? "Select components to verify compatibility"
+                        : compatibilityErrorCount
+                          ? "Compatibility Issues Detected"
+                          : compatibilityWarningCount
+                            ? "Compatibility Data Needed"
+                            : "Compatibility Verified"}
                     </span>
                   </div>
 
                   <ul className="inline-pcbuilderpage-54">
+                    {!compatibilityStatus.passes.length && !compatibilityStatus.issues.length && (
+                      <li>Select components to run compatibility checks.</li>
+                    )}
                     {compatibilityStatus.passes.slice(0, 3).map((pass, idx) => (
                       <li key={idx}>✓ {pass}</li>
                     ))}
@@ -998,11 +1330,11 @@ export default function PCBuilderPage() {
                     <div className="build-analyzer__gauge-wrap">
                       <div
                         className="build-analyzer__gauge"
-                        style={{ "--score": averageScore }}
+                        style={{ "--score": analyzerScore || 0 }}
                       >
                         <div className="build-analyzer__gauge-inner">
                           <span className="build-analyzer__gauge-value">
-                            {averageScore}
+                            {analyzerScore ?? "--"}
                           </span>
                           <span className="build-analyzer__gauge-max">
                             /100
@@ -1012,23 +1344,25 @@ export default function PCBuilderPage() {
                     </div>
 
                     <div className="build-analyzer__summary">
-                      <h4>GOOD BUILD</h4>
+                      <h4>
+                        {analyzerScore === null
+                          ? "AWAITING COMPONENTS"
+                          : analyzerScore >= 85
+                            ? "STRONG BUILD"
+                            : analyzerScore >= 70
+                              ? "BALANCED BUILD"
+                              : "NEEDS ATTENTION"}
+                      </h4>
                       <p>
-                        Your build is well balanced. There are some areas you
-                        can improve.
+                        {analyzerScore === null
+                          ? "Select components to analyze performance, value, power, and compatibility."
+                          : `${installedSlots.length} mounted components analyzed against current compatibility and power checks.`}
                       </p>
                     </div>
                   </div>
 
-                  <div className="build-analyzer__list">
-                    {[
-                      ["Performance", 92],
-                      ["Value", 80],
-                      ["Upgradability", 75],
-                      ["Cooling", 85],
-                      ["Power Efficiency", 90],
-                      ["Compatibility", 100],
-                    ].map(([label, value]) => (
+                  {analyzerMetrics.length > 0 && <div className="build-analyzer__list">
+                    {analyzerMetrics.map(({ label, value }) => (
                       <div key={label} className="build-analyzer__metric">
                         <div className="build-analyzer__metric-label">
                           <span
@@ -1055,7 +1389,7 @@ export default function PCBuilderPage() {
                         <strong>{value}/100</strong>
                       </div>
                     ))}
-                  </div>
+                  </div>}
                 </div>
               </div>
             )}
@@ -1141,8 +1475,7 @@ export default function PCBuilderPage() {
                 </div>
 
                 <div className="inline-pcbuilderpage-100">
-                  ✓ Recommendation engine adjusted to prioritize long-life
-                  platforms & high-efficiency power supplies.
+                  Recommendation scores and ordering update as these weights change.
                 </div>
               </div>
             )}
@@ -1155,12 +1488,23 @@ export default function PCBuilderPage() {
                 </h4>
 
                 <div className="inline-pcbuilderpage-102">
-                  {futureUpgradesAdvice.map((adv, idx) => (
-                    <div key={idx} className="inline-pcbuilderpage-103">
+                  {futureUpgradesAdvice.length === 0 ? (
+                    <p className="build-analyzer__empty">
+                      Select components to see compatible upgrades from the current catalog.
+                    </p>
+                  ) : futureUpgradesAdvice.map((adv) => (
+                    <div key={adv.product.id} className="inline-pcbuilderpage-103">
                       <div className="inline-pcbuilderpage-104">
                         {adv.title}
                       </div>
                       <div className="inline-pcbuilderpage-105">{adv.desc}</div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setBuilderSlot(adv.slot, adv.product)}
+                      >
+                        Install upgrade · {formatCurrency(adv.product.price, 0)}
+                      </button>
                     </div>
                   ))}
                 </div>

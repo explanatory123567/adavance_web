@@ -2,7 +2,12 @@ import {
   buildProductSpecs,
   motherboardFitsCase,
 } from "./utils/productSpecs";
-import { isBestSellerProduct, isNewArrivalProduct } from "./utils/productUtils";
+import {
+  isBestSellerProduct,
+  isNewArrivalProduct,
+  summarizeProductReviews,
+} from "./utils/productUtils";
+import { resolveCoupon } from "./utils/coupons";
 
 describe("buildProductSpecs", () => {
   test("keeps GPU fields needed for length and VRAM checks", () => {
@@ -25,6 +30,7 @@ describe("buildProductSpecs", () => {
     });
 
     expect(specs.gpuClearance).toBe("420mm");
+    expect(specs.includedFans).toBe("Free fans included");
 
     const coolerSpecs = buildProductSpecs({
       category: "cooler",
@@ -114,5 +120,56 @@ describe("buildProductSpecs", () => {
     expect(isBestSellerProduct({ rating: 4.9 })).toBe(true);
     expect(isBestSellerProduct({ performanceScore: 92 })).toBe(true);
     expect(isBestSellerProduct({ rating: 3.4 })).toBe(false);
+  });
+});
+
+describe("resolveCoupon", () => {
+  test("resolves the fixed Cyber Drop discount", () => {
+    expect(resolveCoupon(" cyber2026 ")).toEqual({
+      code: "CYBER2026",
+      discount: 0.1,
+      label: "Cyber Drop",
+    });
+
+  });
+
+  test("preserves an active private offer's actual discount", () => {
+    expect(
+      resolveCoupon(
+        "gear1234",
+        { code: "GEAR1234", discount: 0.15, expiresAt: "2027-01-01T00:00:00Z" },
+        Date.parse("2026-10-01T00:00:00Z"),
+      ),
+    ).toEqual({ code: "GEAR1234", discount: 0.15, label: "Private offer" });
+  });
+
+  test("rejects expired or mismatched private offers", () => {
+    const offer = { code: "GEAR1234", discount: 0.15, expiresAt: "2026-09-01T00:00:00Z" };
+    expect(resolveCoupon("GEAR1234", offer, Date.parse("2026-10-01T00:00:00Z"))).toBeNull();
+    expect(resolveCoupon("GEAR9999", offer, Date.parse("2026-08-01T00:00:00Z"))).toBeNull();
+  });
+});
+
+describe("summarizeProductReviews", () => {
+  test("uses only submitted reviews and returns a live count and average", () => {
+    expect(
+      summarizeProductReviews(
+        { id: "gpu-1", rating: 4.9, reviewsCount: 310 },
+        [
+          { productId: "gpu-1", rating: 5 },
+          { productId: "gpu-1", rating: 3 },
+          { productId: "cpu-1", rating: 1 },
+        ],
+      ),
+    ).toEqual({ rating: 4, reviewsCount: 2 });
+  });
+
+  test("resets products with no submitted reviews to zero", () => {
+    expect(
+      summarizeProductReviews(
+        { id: "gpu-1", rating: 4.9, reviewsCount: 310 },
+        [],
+      ),
+    ).toEqual({ rating: 0, reviewsCount: 0 });
   });
 });

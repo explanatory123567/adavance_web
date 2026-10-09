@@ -8,10 +8,15 @@ The storefront now uses the Express API for catalog, authentication, verificatio
 2. Copy `.env.example` to `.env` and set `MONGODB_URI` and a long `JWT_SECRET`.
 3. Create a Google reCAPTCHA v2 checkbox site/secret key and set both reCAPTCHA variables. Add `REACT_APP_RECAPTCHA_SITE_KEY` to the frontend environment.
 4. Set SMTP variables so verification codes can be delivered by email.
-5. Run `npm run seed` once to load the catalog into MongoDB.
-6. Run `npm run dev` to start the API on port 4000 and the React app on port 3000.
+5. To enable Discord account linking, create a Discord application and set `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and `DISCORD_REDIRECT_URI` in the API environment. Set the Discord OAuth redirect URL to `http://localhost:4000/api/discord/callback` for local development; use your deployed API URL in production.
+6. Run `npm run seed` once to load the catalog into MongoDB.
+7. Run `npm run dev` to start the API on port 4000 and the React app on port 3000.
 
 Without SMTP, the API logs verification codes to the server console for local testing. Do not use that mode in production.
+
+GCash checkout supports manual transfer without a GCash API: set `REACT_APP_GCASH_NUMBER` to the merchant's GCash number, then customers transfer externally and enter the transaction reference. Orders remain pending until the merchant verifies payment; entering a reference does not itself prove that funds were received.
+
+The footer email signup stores newsletter subscriber addresses in MongoDB when the database is connected. Without MongoDB, subscriptions are only retained in server memory for the current session. The signup does not send emails or connect to an email marketing provider.
 
 ## Available scripts
 

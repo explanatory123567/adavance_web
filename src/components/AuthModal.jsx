@@ -110,6 +110,7 @@ export default function AuthModal() {
     setGuestPromptOpen,
     guestActionName,
     requestVerificationCode,
+    resetPassword,
     loginUser,
     loginWithGoogle,
     registerUser,
@@ -134,6 +135,14 @@ export default function AuthModal() {
   const [captchaToken, setCaptchaToken] = useState("");
   const [showRegisterCaptcha, setShowRegisterCaptcha] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
+  const [resetCodeSent, setResetCodeSent] = useState(false);
+  const [showResetCaptcha, setShowResetCaptcha] = useState(false);
+  const [resetCaptchaToken, setResetCaptchaToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const googleButtonRef = useRef(null);
   const googleInitKeyRef = useRef("");
@@ -263,6 +272,14 @@ export default function AuthModal() {
     setCaptchaToken("");
     setShowRegisterCaptcha(false);
     setCodeSent(false);
+    setForgotPasswordOpen(false);
+    setResetEmail("");
+    setResetCode("");
+    setResetPasswordValue("");
+    setResetPasswordConfirm("");
+    setResetCodeSent(false);
+    setShowResetCaptcha(false);
+    setResetCaptchaToken("");
   };
 
   const registrationFormReady =
@@ -377,6 +394,73 @@ export default function AuthModal() {
       setIsSubmitting(false);
     }
   };
+  const handleRequestResetCode = async () => {
+    setRegError("");
+    const email = resetEmail.trim().toLowerCase();
+    if (!email) {
+      setRegError("Enter the email address for your account.");
+      return;
+    }
+    if (!showResetCaptcha) {
+      setShowResetCaptcha(true);
+      setRegError("Complete the Google reCAPTCHA challenge, then request a code.");
+      return;
+    }
+    if (!resetCaptchaToken) {
+      setRegError("Complete the Google reCAPTCHA challenge to continue.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await requestVerificationCode(email, resetCaptchaToken, "reset");
+      setResetCodeSent(true);
+      setShowResetCaptcha(false);
+      setResetCaptchaToken("");
+      setRegError("");
+      showToast(
+        "Reset code requested",
+        "If the account exists, a reset code has been sent to its email address.",
+        "success",
+      );
+    } catch (error) {
+      setRegError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const handleResetPasswordSubmit = async (event) => {
+    event.preventDefault();
+    setRegError("");
+    if (resetPasswordValue.length < 8) {
+      setRegError("Use a password with at least 8 characters.");
+      return;
+    }
+    if (resetPasswordValue !== resetPasswordConfirm) {
+      setRegError("Passwords do not match.");
+      return;
+    }
+    setIsSubmitting(true);
+    const email = resetEmail.trim().toLowerCase();
+    try {
+      await resetPassword({
+        email,
+        code: resetCode,
+        password: resetPasswordValue,
+      });
+      setForgotPasswordOpen(false);
+      setResetCodeSent(false);
+      setLoginIdentifier(email);
+      setLoginPassword("");
+      setResetCode("");
+      setResetPasswordValue("");
+      setResetPasswordConfirm("");
+      setRegError("");
+    } catch (error) {
+      setRegError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div
@@ -406,7 +490,9 @@ export default function AuthModal() {
               </div>
               <div>
                 <h3 className="inline-authmodal-8">
-                  {authModalMode === "login"
+                  {forgotPasswordOpen
+                    ? "RESET PASSWORD"
+                    : authModalMode === "login"
                     ? "LOGIN TO YOUR ACCOUNT"
                     : "CREATE ACCOUNT"}
                 </h3>
@@ -423,7 +509,7 @@ export default function AuthModal() {
           </div>
 
           {/* Mode Switcher Tabs */}
-          <div className="inline-authmodal-16">
+          {!forgotPasswordOpen && <div className="inline-authmodal-16">
             <button
               type="button"
               onClick={() => switchAuthMode("login")}
@@ -476,10 +562,10 @@ export default function AuthModal() {
             >
               Register
             </button>
-          </div>
+          </div>}
 
           {/* LOGIN FORM */}
-          {authModalMode === "login" && (
+          {authModalMode === "login" && !forgotPasswordOpen && (
             <>
               {regError && (
                 <div className="inline-authmodal-30">{regError}</div>
@@ -517,9 +603,13 @@ export default function AuthModal() {
                       href="#forgot"
                       onClick={(e) => {
                         e.preventDefault();
-                        setRegError(
-                          "Password recovery is available through account support.",
-                        );
+                        setResetEmail(loginIdentifier.includes("@") ? loginIdentifier : "");
+                        setResetCode("");
+                        setResetCodeSent(false);
+                        setShowResetCaptcha(false);
+                        setResetCaptchaToken("");
+                        setForgotPasswordOpen(true);
+                        setRegError("");
                       }}
                       className="inline-authmodal-20"
                     >
@@ -599,6 +689,113 @@ export default function AuthModal() {
                 </div>
               </form>
             </>
+          )}
+
+          {authModalMode === "login" && forgotPasswordOpen && (
+            <form onSubmit={handleResetPasswordSubmit}>
+              {regError && <div className="inline-authmodal-30">{regError}</div>}
+              <p className="auth-reset-copy">
+                Enter your account email to receive a one-time password reset code.
+              </p>
+              <div className="form-group">
+                <label className="form-label" htmlFor="reset-email">Email Address</label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  className="form-control"
+                  value={resetEmail}
+                  onChange={(event) => setResetEmail(event.target.value)}
+                  required
+                  disabled={resetCodeSent}
+                />
+              </div>
+              {showResetCaptcha && !resetCodeSent && (
+                <GoogleCaptcha onVerify={setResetCaptchaToken} />
+              )}
+              {!resetCodeSent ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary auth-reset-action"
+                  onClick={handleRequestResetCode}
+                  disabled={isSubmitting}
+                >
+                  <RefreshCw size={14} /> Send reset code
+                </button>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="reset-code">Email code</label>
+                    <input
+                      id="reset-code"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      className="form-control"
+                      value={resetCode}
+                      onChange={(event) => setResetCode(event.target.value.replace(/\D/g, ""))}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="reset-password">New password</label>
+                    <input
+                      id="reset-password"
+                      type="password"
+                      className="form-control"
+                      value={resetPasswordValue}
+                      onChange={(event) => setResetPasswordValue(event.target.value)}
+                      minLength={8}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="reset-password-confirm">Confirm new password</label>
+                    <input
+                      id="reset-password-confirm"
+                      type="password"
+                      className="form-control"
+                      value={resetPasswordConfirm}
+                      onChange={(event) => setResetPasswordConfirm(event.target.value)}
+                      minLength={8}
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary auth-reset-action" disabled={isSubmitting}>
+                    Reset password <ArrowRight size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary auth-reset-action"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      setResetCodeSent(false);
+                      setResetCode("");
+                      setShowResetCaptcha(true);
+                      setResetCaptchaToken("");
+                      setRegError("Complete the new CAPTCHA challenge, then send another reset code.");
+                    }}
+                  >
+                    <RefreshCw size={14} /> Resend code
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="auth-reset-back"
+                onClick={() => {
+                  setForgotPasswordOpen(false);
+                  setResetCodeSent(false);
+                  setResetCode("");
+                  setResetPasswordValue("");
+                  setResetPasswordConfirm("");
+                  setShowResetCaptcha(false);
+                  setResetCaptchaToken("");
+                  setRegError("");
+                }}
+              >
+                Back to sign in
+              </button>
+            </form>
           )}
 
           {/* REGISTER FORM */}

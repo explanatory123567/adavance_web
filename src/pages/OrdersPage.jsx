@@ -13,6 +13,7 @@ import {
   Download,
   ChevronDown,
   ChevronUp,
+  Copy,
 } from "lucide-react";
 const statusBadge = (status) => {
   switch (status) {
@@ -60,6 +61,14 @@ export default function OrdersPage() {
   });
   const toggleExpand = (id) => {
     setExpandedOrderId((prev) => (prev === id ? null : id));
+  };
+  const copyTrackingNumber = async (trackingNumber) => {
+    try {
+      await navigator.clipboard.writeText(trackingNumber);
+      showToast("Tracking number copied", trackingNumber, "success");
+    } catch (error) {
+      showToast("Could not copy tracking number", "Please select and copy it manually.", "warning");
+    }
   };
   return (
     <div className="orders-page inline-orderspage-0">
@@ -132,6 +141,29 @@ export default function OrdersPage() {
           <div className="inline-orderspage-11">
             {filteredOrders.map((order) => {
               const isExpanded = expandedOrderId === order.id;
+              const statusHistory = Array.isArray(order.statusHistory)
+                ? order.statusHistory
+                : [];
+              const historyDate = (status) =>
+                statusHistory.find((event) => event.status === status)?.at || null;
+              const trackingSteps = [
+                { label: "Order Placed", active: true, at: statusHistory[0]?.at || order.date },
+                {
+                  label: "Lab Assembly & Stress-Test",
+                  active: ["Processing", "Shipped", "Completed"].includes(order.status),
+                  at: historyDate("Processing"),
+                },
+                {
+                  label: "Carrier In-Transit",
+                  active: ["Shipped", "Completed"].includes(order.status),
+                  at: historyDate("Shipped"),
+                },
+                {
+                  label: "Delivered",
+                  active: order.status === "Completed",
+                  at: historyDate("Completed"),
+                },
+              ];
               return (
                 <div
                   key={order.id}
@@ -193,39 +225,26 @@ export default function OrdersPage() {
                       {/* Tracking Progress Timeline */}
                       {order.status !== "Cancelled" && (
                         <div className="inline-orderspage-24">
-                          <div className="inline-orderspage-25">
-                            Telemetry Tracking (
-                            {order.trackingNumber || "Carrier Assigned"})
+                          <div className="orders-tracking-heading">
+                            <div className="inline-orderspage-25">
+                              Tracking number: {order.trackingNumber || "Not assigned"}
+                            </div>
+                            {order.trackingNumber && (
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm orders-copy-tracking"
+                                onClick={() => copyTrackingNumber(order.trackingNumber)}
+                              >
+                                <Copy size={13} /> Copy
+                              </button>
+                            )}
                           </div>
 
                           <div className="inline-orderspage-26">
                             {/* Connecting Line */}
                             <div className="inline-orderspage-27" />
 
-                            {[
-                              {
-                                label: "Order Placed",
-                                active: true,
-                              },
-                              {
-                                label: "Lab Assembly & Stress-Test",
-                                active: [
-                                  "Processing",
-                                  "Shipped",
-                                  "Completed",
-                                ].includes(order.status),
-                              },
-                              {
-                                label: "Carrier In-Transit",
-                                active: ["Shipped", "Completed"].includes(
-                                  order.status,
-                                ),
-                              },
-                              {
-                                label: "Delivered",
-                                active: order.status === "Completed",
-                              },
-                            ].map((step, idx) => (
+                            {trackingSteps.map((step, idx) => (
                               <div key={idx} className="inline-orderspage-28">
                                 <div
                                   style={{
@@ -262,11 +281,33 @@ export default function OrdersPage() {
                                 >
                                   {step.label}
                                 </div>
+                                {step.at && (
+                                  <small className="orders-tracking-step__time">
+                                    {new Date(step.at).toLocaleString()}
+                                  </small>
+                                )}
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
+
+                      <div className="orders-payment-summary">
+                        <strong>Payment</strong>
+                        <span>
+                          {order.paymentMethod}
+                          {order.paymentMethod === "GCash" ? " (Manual)" : ""}
+                        </span>
+                        <span>
+                          {order.paymentStatus ||
+                            (order.paymentMethod === "GCash"
+                              ? "Pending verification"
+                              : "To Collect")}
+                        </span>
+                        {order.gcashReference && (
+                          <small>GCash reference: {order.gcashReference}</small>
+                        )}
+                      </div>
 
                       {/* Items Ordered List */}
                       <div>

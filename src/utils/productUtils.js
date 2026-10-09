@@ -21,3 +21,19 @@ export const isBestSellerProduct = (product) => {
   if (typeof product.performanceScore === "number" && product.performanceScore >= 90) return true;
   return false;
 };
+
+export const summarizeProductReviews = (product, reviews) => {
+  const productReviews = reviews.filter(
+    (review) => review.productId === product.id,
+  );
+  if (!productReviews.length) return { rating: 0, reviewsCount: 0 };
+
+  const ratingTotal = productReviews.reduce(
+    (total, review) => total + review.rating,
+    0,
+  );
+  return {
+    rating: Number((ratingTotal / productReviews.length).toFixed(1)),
+    reviewsCount: productReviews.length,
+  };
+};

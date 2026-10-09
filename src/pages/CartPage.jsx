@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./CartPage.css";
 import { useApp } from "../context/AppContext";
 import { formatCurrency } from "../utils/currency";
+import { resolveCoupon } from "../utils/coupons";
 import {
   ShoppingCart,
   Trash2,
@@ -13,39 +14,68 @@ import {
 export default function CartPage() {
   const {
     cart,
+    checkoutItemIds,
+    setCheckoutItemIds,
     removeFromCart,
     updateCartQuantity,
     setCurrentPage,
     showToast,
   } = useApp();
-  const [couponCode, setCouponCode] = useState(() => localStorage.getItem("nextgear_promo") || JSON.parse(localStorage.getItem("nextgear_random_offer") || "null")?.code || "");
-  const [appliedDiscount, setAppliedDiscount] = useState(0); // e.g. 0.10 for 10%
+  const randomOffer = JSON.parse(localStorage.getItem("nextgear_random_offer") || "null");
+  const [couponCode, setCouponCode] = useState(
+    () => localStorage.getItem("nextgear_promo") || randomOffer?.code || "",
+  );
+  const [appliedPromotion, setAppliedPromotion] = useState(null);
+  const randomOfferCode = randomOffer?.code;
+  const randomOfferDiscount = randomOffer?.discount;
+  const randomOfferExpiresAt = randomOffer?.expiresAt;
 
-  const subtotal = cart.reduce(
+  const selectedItems = cart.filter(
+    (item) => checkoutItemIds === null || checkoutItemIds.includes(item.id),
+  );
+  const subtotal = selectedItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
-  const randomOffer = JSON.parse(localStorage.getItem("nextgear_random_offer") || "null");
+  const appliedDiscount = appliedPromotion?.discount || 0;
   const discountAmount = subtotal * appliedDiscount;
-  const shipping = subtotal > 500 ? 0 : 49;
+  const shipping = 0;
   const tax = (subtotal - discountAmount) * 0.075;
   const total = subtotal - discountAmount + shipping + tax;
+  const toggleItemSelection = (itemId) => {
+    const currentIds = checkoutItemIds ?? cart.map((item) => item.id);
+    setCheckoutItemIds(
+      currentIds.includes(itemId)
+        ? currentIds.filter((id) => id !== itemId)
+        : [...currentIds, itemId],
+    );
+  };
+  const selectAllItems = (selected) =>
+    setCheckoutItemIds(selected ? cart.map((item) => item.id) : []);
   useEffect(() => {
-    if (couponCode.trim().toUpperCase() === "CYBER2026" || randomOffer?.code === couponCode.trim().toUpperCase()) {
-      setAppliedDiscount(couponCode.trim().toUpperCase() === "CYBER2026" ? 0.1 : randomOffer.discount);
-    }
-  }, [couponCode]);
+    const promotion = resolveCoupon(couponCode, {
+      code: randomOfferCode,
+      discount: randomOfferDiscount,
+      expiresAt: randomOfferExpiresAt,
+    });
+    setAppliedPromotion(promotion);
+    if (promotion) localStorage.setItem("nextgear_promo", promotion.code);
+    else localStorage.removeItem("nextgear_promo");
+  }, [couponCode, randomOfferCode, randomOfferDiscount, randomOfferExpiresAt]);
   const handleApplyCoupon = (e) => {
     e.preventDefault();
-    if (couponCode.trim().toUpperCase() === "CYBER2026" || randomOffer?.code === couponCode.trim().toUpperCase()) {
-      setAppliedDiscount(couponCode.trim().toUpperCase() === "CYBER2026" ? 0.1 : randomOffer.discount);
-      localStorage.setItem("nextgear_promo", "CYBER2026");
+    const promotion = resolveCoupon(couponCode, randomOffer);
+    if (promotion) {
+      setAppliedPromotion(promotion);
+      localStorage.setItem("nextgear_promo", promotion.code);
       showToast(
         "Coupon Applied!",
-        "10% Cyber Drop discount active.",
+        `${promotion.code} gives ${Math.round(promotion.discount * 100)}% off.`,
         "success",
       );
     } else {
+      setAppliedPromotion(null);
+      localStorage.removeItem("nextgear_promo");
       showToast("Invalid Code", "Try coupon code: CYBER2026", "warning");
     }
   };
@@ -86,11 +116,26 @@ export default function CartPage() {
           <div className="inline-cartpage-9">
             {/* Left: Cart Items List */}
             <div className="cyber-card-static inline-cartpage-10">
+              <label className="cart-select-all">
+                <input
+                  type="checkbox"
+                  checked={selectedItems.length === cart.length}
+                  onChange={(event) => selectAllItems(event.target.checked)}
+                />
+                <span>Select all items for checkout</span>
+              </label>
               <div className="inline-cartpage-11">
                 {cart.map((item) => (
                   <div key={item.id} className="inline-cartpage-12">
                     {/* Item Image & Title */}
                     <div className="inline-cartpage-13">
+                      <input
+                        className="cart-item-select"
+                        type="checkbox"
+                        checked={checkoutItemIds === null || checkoutItemIds.includes(item.id)}
+                        onChange={() => toggleItemSelection(item.id)}
+                        aria-label={`Select ${item.product.name} for checkout`}
+                      />
                       <div className="inline-cartpage-14">
                         <img
                           src={item.product.image}
@@ -173,7 +218,9 @@ export default function CartPage() {
 
             {/* Right: Order Pricing Summary & Checkout Button */}
             <div className="cyber-card-static inline-cartpage-30">
-              <h3 className="inline-cartpage-31">Order Summary</h3>
+              <h3 className="inline-cartpage-31">
+                Order Summary ({selectedItems.length} selected)
+              </h3>
 
               {/* Promo Coupon Form */}
               <form onSubmit={handleApplyCoupon} className="inline-cartpage-32">
@@ -194,7 +241,7 @@ export default function CartPage() {
                 </div>
                 {appliedDiscount > 0 && (
                   <div className="inline-cartpage-36">
-                    ✓ 10% Cyber Drop discount applied!
+                    {Math.round(appliedDiscount * 100)}% discount applied.
                   </div>
                 )}
               </form>
@@ -210,7 +257,7 @@ export default function CartPage() {
 
                 {appliedDiscount > 0 && (
                   <div className="flex-between inline-cartpage-40">
-                    <span>Promo Discount (10%)</span>
+                    <span>Promo Discount ({Math.round(appliedDiscount * 100)}%)</span>
                     <span>-₱{discountAmount.toFixed(2)}</span>
                   </div>
                 )}
@@ -250,8 +297,11 @@ export default function CartPage() {
               <button
                 onClick={() => setCurrentPage("checkout")}
                 className="btn btn-primary inline-cartpage-47"
+                disabled={selectedItems.length === 0}
               >
-                <span>Proceed to Checkout</span>
+                <span>
+                  {selectedItems.length ? "Proceed to Checkout" : "Select items to continue"}
+                </span>
                 <ArrowRight size={16} />
               </button>
 

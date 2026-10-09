@@ -1,12 +1,17 @@
 .pc-builder-page {
   min-width: 0;
 }
+.pc-builder-page .container-wide {
+  max-width: 1600px;
+}
 .pc-assembly-viewport {
   position: relative;
-  min-height: 380px;
+  min-height: 720px;
+  height: 720px;
 }
 .pc-builder-canvas {
-  min-height: 380px;
+  min-height: 720px;
+  height: 720px;
   background: radial-gradient(
     circle at 50% 42%,
     rgba(15, 45, 67, 0.75),
@@ -71,8 +76,8 @@
 
 .inline-pcbuilderpage-8 {
   display: grid;
-  grid-template-columns: 350px 1fr 390px;
-  gap: 24px;
+  grid-template-columns: 260px minmax(0, 1.8fr) 300px;
+  gap: 16px;
   align-items: start;
 }
 
@@ -192,7 +197,8 @@
 }
 
 .inline-pcbuilderpage-28 {
-  height: 380px;
+  height: 720px;
+  min-height: 720px;
   position: relative;
   display: flex;
   align-items: center;
@@ -371,7 +377,7 @@
 
 .build-analyzer__content {
   display: grid;
-  grid-template-columns: 146px 1fr;
+  grid-template-columns: minmax(0, 118px) minmax(0, 1fr);
   gap: 14px;
   align-items: center;
   margin-bottom: 8px;
@@ -379,6 +385,7 @@
 
 .build-analyzer__gauge-wrap {
   display: flex;
+  min-width: 0;
   justify-content: center;
   align-items: center;
 }
@@ -432,15 +439,18 @@
 }
 
 .build-analyzer__summary {
-  padding-left: 4px;
+  min-width: 0;
+  padding-left: 0;
 }
 
 .build-analyzer__summary h4 {
   margin: 0 0 8px;
   color: #f8fafc;
-  font-size: 18px;
-  letter-spacing: 0.08em;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: 0;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .build-analyzer__summary p {
@@ -448,6 +458,7 @@
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .build-analyzer__list {

@@ -41,10 +41,32 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  resetPassword: (payload) =>
+    request("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 export const dataApi = {
   catalog: () => request("/catalog"),
+  subscribeNewsletter: (email) =>
+    request("/newsletter/subscribe", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  profile: (token) =>
+    request("/profile", { headers: { Authorization: `Bearer ${token}` } }),
+  discordConnect: (token) =>
+    request("/discord/connect", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  discordDisconnect: (token) =>
+    request("/discord/disconnect", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
   randomOffer: (token) => request("/promotions/random-offer", { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
   account: (token) =>
     request("/account", { headers: { Authorization: `Bearer ${token}` } }),
@@ -99,6 +121,40 @@ export const dataApi = {
     }),
   orders: (token) =>
     request("/orders", { headers: { Authorization: `Bearer ${token}` } }),
+  notifications: (token) =>
+    request("/notifications", { headers: { Authorization: `Bearer ${token}` } }),
+  markNotificationRead: (token, id) =>
+    request(`/notifications/${id}/read`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  markAllNotificationsRead: (token) =>
+    request("/notifications/read-all", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  reviews: () => request("/reviews"),
+  myReviews: (token) =>
+    request("/reviews/mine", { headers: { Authorization: `Bearer ${token}` } }),
+  createReview: (token, payload) =>
+    request("/reviews", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    }),
+  adminReviews: (token) =>
+    request("/admin/reviews", { headers: { Authorization: `Bearer ${token}` } }),
+  replyToReview: (token, id, reply) =>
+    request(`/admin/reviews/${id}/reply`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reply }),
+    }),
+  deleteReview: (token, id) =>
+    request(`/admin/reviews/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
   users: (token) =>
     request("/users", { headers: { Authorization: `Bearer ${token}` } }),
   createProduct: (token, payload) =>
@@ -127,6 +183,12 @@ export const dataApi = {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ status }),
+    }),
+  updateOrderPaymentStatus: (token, id, paymentStatus) =>
+    request(`/orders/${id}/payment-status`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ paymentStatus }),
     }),
   updateUserStatus: (token, id, status) =>
     request(`/users/${id}/status`, {

@@ -17,7 +17,6 @@ import {
   Zap,
   Box,
   Snowflake,
-  Wind,
 } from "lucide-react";
 const iconMap = {
   Cpu: Cpu,
@@ -28,7 +27,6 @@ const iconMap = {
   Zap: Zap,
   Box: Box,
   Snowflake: Snowflake,
-  Wind: Wind,
 };
 export default function ComponentsPage() {
   const {
@@ -41,11 +39,22 @@ export default function ComponentsPage() {
 
   // Filters State
   const [selectedBrands, setSelectedBrands] = useState([]);
-  const [priceMax, setPriceMax] = useState(2500);
+  const [priceMax, setPriceMax] = useState(null);
   const [minRating, setMinRating] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [performanceTier, setPerformanceTier] = useState("all"); // 'all' | '90' | '95'
   const [sortBy, setSortBy] = useState("featured"); // 'featured' | 'price-asc' | 'price-desc' | 'rating' | 'score'
+  const maxCatalogPrice = products.reduce(
+    (max, product) => Math.max(max, Number(product.price) || 0),
+    2500,
+  );
+  const priceSliderMax = Math.ceil(maxCatalogPrice / 1000) * 1000;
+  const effectivePriceMax =
+    priceMax === null ? priceSliderMax : Math.min(priceMax, priceSliderMax);
+  const priceSliderStep = Math.max(
+    50,
+    Math.round(priceSliderMax / 100 / 50) * 50,
+  );
 
   // Brand Toggle Handler
   const toggleBrand = (brand) => {
@@ -58,7 +67,7 @@ export default function ComponentsPage() {
   const resetFilters = () => {
     setSelectedCategoryFilter("all");
     setSelectedBrands([]);
-    setPriceMax(2500);
+    setPriceMax(null);
     setMinRating(0);
     setInStockOnly(false);
     setPerformanceTier("all");
@@ -85,7 +94,7 @@ export default function ComponentsPage() {
           return false;
         }
         // Price filter
-        if (product.price > priceMax) {
+        if (Number(product.price) > effectivePriceMax) {
           return false;
         }
         // Rating filter
@@ -127,7 +136,7 @@ export default function ComponentsPage() {
     products,
     selectedCategoryFilter,
     selectedBrands,
-    priceMax,
+    effectivePriceMax,
     minRating,
     inStockOnly,
     performanceTier,
@@ -268,21 +277,21 @@ export default function ComponentsPage() {
                   Max Budget
                 </label>
                 <span className="inline-componentspage-19">
-                  {formatCurrency(priceMax, 0)}
+                  {formatCurrency(effectivePriceMax, 0)}
                 </span>
               </div>
               <input
                 type="range"
                 min="30"
-                max="2500"
-                step="50"
-                value={priceMax}
+                max={priceSliderMax}
+                step={priceSliderStep}
+                value={effectivePriceMax}
                 onChange={(e) => setPriceMax(Number(e.target.value))}
                 className="inline-componentspage-20"
               />
               <div className="flex-between inline-componentspage-21">
                 <span>₱30</span>
-                <span>₱2,500+</span>
+                <span>{formatCurrency(priceSliderMax, 0)}+</span>
               </div>
             </div>
 

@@ -4,11 +4,12 @@ import React, {
   useEffect,
   useState,
   useMemo,
+  useCallback,
 } from "react";
 import confetti from "canvas-confetti";
-import { CATEGORIES } from "../data/catalogMeta";
 import { authApi, dataApi } from "../services/api";
 import { motherboardFitsCase } from "../utils/productSpecs";
+import { summarizeProductReviews } from "../utils/productUtils";
 
 const AppContext = createContext();
 
@@ -139,7 +140,7 @@ const FALLBACK_PRODUCTS = [
     description: "Dual-chamber tempered-glass chassis.",
     performanceScore: 88,
     wattage: 0,
-    specs: { gpuClearance: "420mm" },
+    specs: { gpuClearance: "420mm", includedFans: "Free fans included" },
     featured: true,
     isPopular: true,
     rating: 4.9,
@@ -165,34 +166,30 @@ const FALLBACK_PRODUCTS = [
     reviewsCount: 96,
     inStock: true,
   },
-  {
-    id: "fans-1",
-    name: "Lian Li UNI FAN SL-INFINITY 120 Triple Pack",
-    brand: "Lian Li",
-    category: "fans",
-    price: 99,
-    stock: 20,
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "Linked high-airflow RGB fan system.",
-    performanceScore: 87,
-    wattage: 12,
-    specs: { airflow: "63.1 CFM" },
-    featured: false,
-    isPopular: true,
-    rating: 4.7,
-    reviewsCount: 88,
-    inStock: true,
-  },
 ];
 
-const FALLBACK_ORDERS = [
-  { id: "NG-10001", date: "2026-08-02", customer: "Ava Reyes", total: 3890, status: "Paid" },
-  { id: "NG-10002", date: "2026-08-05", customer: "Liam Cole", total: 2190, status: "Processing" },
-  { id: "NG-10003", date: "2026-08-09", customer: "Maya Patel", total: 4975, status: "Shipped" },
-  { id: "NG-10004", date: "2026-08-13", customer: "Noah Smith", total: 2760, status: "Paid" },
-  { id: "NG-10005", date: "2026-08-15", customer: "Isla Gomez", total: 6240, status: "Processing" },
-];
+const normalizeCatalogProducts = (items) =>
+  items
+    .filter((product) => product.category !== "fans")
+    .map((product) =>
+      product.category === "case"
+        ? {
+            ...product,
+            specs: {
+              ...product.specs,
+              includedFans: "Free fans included",
+            },
+          }
+        : product,
+    );
+
+const mergeCatalogProducts = (catalogItems) => {
+  const apiProductIds = new Set(catalogItems.map((product) => product.id));
+  return normalizeCatalogProducts([
+    ...FALLBACK_PRODUCTS.filter((product) => !apiProductIds.has(product.id)),
+    ...catalogItems,
+  ]);
+};
 
 const FALLBACK_USERS = [
   { id: "u-1", name: "Ava Reyes", status: "Active" },
@@ -213,6 +210,7 @@ export function AppProvider({ children }) {
   );
   const [userRole, setUserRole] = useState(() => authUser?.role || "guest");
   const [currentPage, setCurrentPage] = useState("home");
+  const [adminTab, setAdminTab] = useState("dashboard");
 
   // Products & Prebuilts catalog (dynamic for admin mutations)
   const [products, setProducts] = useState(FALLBACK_PRODUCTS);
@@ -232,6 +230,7 @@ export function AppProvider({ children }) {
 
   // Cart & Wishlist
   const [cart, setCart] = useState([]);
+  const [checkoutItemIds, setCheckoutItemIds] = useState(null);
   const [wishlist, setWishlist] = useState([]);
   const [compareList, setCompareList] = useState([]);
 
@@ -245,7 +244,6 @@ export function AppProvider({ children }) {
     psu: null,
     case: null,
     cooler: null,
-    fans: null,
   });
 
   // Priority Slider Weights: Budget vs Performance vs Upgradability (0-100)
@@ -258,6 +256,10 @@ export function AppProvider({ children }) {
   // Saved Builds & Orders & Users
   const [savedBuilds, setSavedBuilds] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [myReviews, setMyReviews] = useState([]);
+  const [adminReviews, setAdminReviews] = useState([]);
   const [users, setUsers] = useState(FALLBACK_USERS);
   const [models3d, setModels3d] = useState([]);
   const [addresses, setAddresses] = useState([]);
@@ -268,7 +270,7 @@ export function AppProvider({ children }) {
         const catalogItems = Array.isArray(catalog)
           ? catalog
           : catalog.products || [];
-        setProducts(catalogItems);
+        setProducts(mergeCatalogProducts(catalogItems));
         setBuilderConfig((current) => {
           if (Object.keys(current).some((key) => current[key])) {
             return current;
@@ -283,7 +285,6 @@ export function AppProvider({ children }) {
             psu: null,
             case: null,
             cooler: null,
-            fans: null,
           };
         });
       })
@@ -319,7 +320,7 @@ export function AppProvider({ children }) {
         const catalogItems = Array.isArray(catalog)
           ? catalog
           : catalog.products || [];
-        setProducts(catalogItems);
+        setProducts(mergeCatalogProducts(catalogItems));
       }).catch(() => {});
     };
     const interval = setInterval(refreshCatalog, 15000);
@@ -353,8 +354,11 @@ export function AppProvider({ children }) {
           setCart(account.cart || []);
           setWishlist(account.wishlist || []);
           setSavedBuilds(account.savedBuilds || []);
-          setOrders(account.orders || []);
           setAddresses(account.addresses || []);
+          dataApi
+            .orders(authToken)
+            .then(setOrders)
+            .catch(() => setOrders(account.orders || []));
           if (authUser?.role === "admin") {
             dataApi
               .users(authToken)
@@ -381,11 +385,58 @@ export function AppProvider({ children }) {
           setCart([]);
           setWishlist([]);
           setSavedBuilds([]);
-          setOrders([]);
           setAddresses([]);
         });
     }
   }, [authToken, authUser?.role, products.length]);
+
+  useEffect(() => {
+    let active = true;
+    const refreshReviews = () =>
+      dataApi.reviews().then((items) => {
+        if (active) setReviews(items);
+      }).catch(() => {});
+    refreshReviews();
+    const interval = setInterval(refreshReviews, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authToken) {
+      setNotifications([]);
+      setMyReviews([]);
+      setAdminReviews([]);
+      return undefined;
+    }
+    let active = true;
+    const refreshAccountActivity = () => {
+      dataApi.notifications(authToken).then((items) => {
+        if (active) setNotifications(items);
+      }).catch(() => {});
+      dataApi.orders(authToken).then((items) => {
+        if (active) setOrders(items);
+      }).catch(() => {});
+      dataApi.myReviews(authToken).then((items) => {
+        if (active) setMyReviews(items);
+      }).catch(() => {});
+      if (authUser?.role === "admin") {
+        dataApi.adminReviews(authToken).then((items) => {
+          if (active) setAdminReviews(items);
+        }).catch(() => {});
+      } else {
+        setAdminReviews([]);
+      }
+    };
+    refreshAccountActivity();
+    const interval = setInterval(refreshAccountActivity, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [authToken, authUser?.role]);
 
   // Global UI Modals & State
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -419,6 +470,57 @@ export function AppProvider({ children }) {
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
+
+  const markNotificationRead = async (notificationId) => {
+    setNotifications((prev) =>
+      prev.map((item) =>
+        item.id === notificationId ? { ...item, isRead: true } : item,
+      ),
+    );
+    try {
+      await dataApi.markNotificationRead(authToken, notificationId);
+    } catch (error) {
+      showToast("Notification could not be updated", error.message, "warning");
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    try {
+      await dataApi.markAllNotificationsRead(authToken);
+    } catch (error) {
+      showToast("Notifications could not be updated", error.message, "warning");
+    }
+  };
+
+  const submitReview = async (product, reviewData) => {
+    if (!requireAuth(null, "submit a product review")) return null;
+    try {
+      const review = await dataApi.createReview(authToken, {
+        ...reviewData,
+        productId: product.id,
+        productName: product.name,
+      });
+      setMyReviews((prev) => [review, ...prev]);
+      setReviews((prev) => [review, ...prev.filter((item) => item.id !== review.id)]);
+      showToast("Review published", "Your review is now visible on this product.", "success");
+      return review;
+    } catch (error) {
+      showToast("Review could not be submitted", error.message, "warning");
+      return null;
+    }
+  };
+
+  const getProductReviewSummary = (product) =>
+    summarizeProductReviews(product, reviews);
+  const productsWithReviewStats = useMemo(
+    () =>
+      products.map((product) => ({
+        ...product,
+        ...getProductReviewSummary(product),
+      })),
+    [products, reviews],
+  );
 
   // Guard action for guests
   const requireAuth = (callback, actionName = "perform this action") => {
@@ -456,8 +558,17 @@ export function AppProvider({ children }) {
     }
   };
 
-  const requestVerificationCode = async (email, captchaToken) =>
-    authApi.requestCode({ email, purpose: "register", captchaToken });
+  const requestVerificationCode = async (
+    email,
+    captchaToken,
+    purpose = "register",
+  ) => authApi.requestCode({ email, purpose, captchaToken });
+
+  const resetPassword = async (payload) => {
+    const result = await authApi.resetPassword(payload);
+    showToast("Password updated", "You can now sign in with your new password.", "success");
+    return result;
+  };
 
   const loginUser = async (credentials) => {
     const session = await authApi.login(credentials);
@@ -524,6 +635,28 @@ export function AppProvider({ children }) {
     localStorage.setItem("nextgear_user", JSON.stringify(session.user));
     return session.user;
   };
+
+  const refreshProfile = useCallback(async () => {
+    if (!authToken) throw new Error("Sign in to manage your profile.");
+    const user = await dataApi.profile(authToken);
+    setAuthUser(user);
+    localStorage.setItem("nextgear_user", JSON.stringify(user));
+    return user;
+  }, [authToken]);
+
+  const connectDiscord = useCallback(async () => {
+    if (!authToken) throw new Error("Sign in to connect a Discord account.");
+    const { authorizationUrl } = await dataApi.discordConnect(authToken);
+    window.location.assign(authorizationUrl);
+  }, [authToken]);
+
+  const disconnectDiscord = useCallback(async () => {
+    if (!authToken) throw new Error("Sign in to manage your Discord connection.");
+    const user = await dataApi.discordDisconnect(authToken);
+    setAuthUser(user);
+    localStorage.setItem("nextgear_user", JSON.stringify(user));
+    return user;
+  }, [authToken]);
 
   const addModelAsset = async (asset) => {
     try {
@@ -593,8 +726,13 @@ export function AppProvider({ children }) {
   };
 
   // Cart Functions
-  const addToCart = (product, quantity = 1, customName = null) => {
-    if (!requireAuth(null, "add items to cart")) return;
+  const addToCart = (
+    product,
+    quantity = 1,
+    customName = null,
+    { checkoutOnly = false, notificationTitle = "Added to Cart", notificationMessage } = {},
+  ) => {
+    if (!requireAuth(null, "add items to cart")) return null;
 
     const existing = cart.find(
       (item) => item.product.id === product.id && !item.isCustomBuild,
@@ -616,12 +754,24 @@ export function AppProvider({ children }) {
         ];
     setCart(nextCart);
     persistAccount({ cart: nextCart });
+    const cartItemId = existing
+      ? nextCart.find((item) => item.product.id === product.id && !item.isCustomBuild)?.id
+      : nextCart[nextCart.length - 1].id;
+    setCheckoutItemIds((currentIds) => {
+      if (checkoutOnly) return [cartItemId];
+      return currentIds === null
+        ? null
+        : [...new Set([...currentIds, cartItemId])];
+    });
 
-    showToast(
-      "Added to Cart",
-      `${product.name} (x${quantity}) added.`,
-      "success",
-    );
+    if (notificationTitle) {
+      showToast(
+        notificationTitle,
+        notificationMessage || `${product.name} (x${quantity}) added.`,
+        "success",
+      );
+    }
+    return cartItemId;
   };
 
   const addCustomBuildToCart = (build) => {
@@ -648,6 +798,9 @@ export function AppProvider({ children }) {
       },
     ];
     setCart(nextCart);
+    setCheckoutItemIds((currentIds) =>
+      currentIds === null ? null : [...new Set([...currentIds, nextCart[nextCart.length - 1].id])],
+    );
     persistAccount({ cart: nextCart });
 
     showToast(
@@ -660,6 +813,9 @@ export function AppProvider({ children }) {
   const removeFromCart = (cartItemId) => {
     const nextCart = cart.filter((item) => item.id !== cartItemId);
     setCart(nextCart);
+    setCheckoutItemIds((currentIds) =>
+      currentIds === null ? null : currentIds.filter((id) => id !== cartItemId),
+    );
     persistAccount({ cart: nextCart });
     showToast("Item Removed", "Item removed from shopping cart.", "info");
   };
@@ -678,6 +834,7 @@ export function AppProvider({ children }) {
 
   const clearCart = () => {
     setCart([]);
+    setCheckoutItemIds(null);
     persistAccount({ cart: [] });
   };
 
@@ -865,10 +1022,16 @@ export function AppProvider({ children }) {
 
     // 1. Socket Compatibility
     if (cpu && mb) {
-      const cpuSocket = cpu.specs?.socket || "AM5";
-      const mbSocket = mb.specs?.socket || "AM5";
-
-      if (cpuSocket !== mbSocket) {
+      const cpuSocket = cpu.specs?.socket;
+      const mbSocket = mb.specs?.socket;
+      if (!cpuSocket || !mbSocket) {
+        issues.push({
+          type: "warning",
+          title: "Socket data missing",
+          message: "Add socket specifications to both the CPU and motherboard to verify their fit.",
+          category: "motherboard",
+        });
+      } else if (cpuSocket !== mbSocket) {
         issues.push({
           type: "error",
           title: `Socket Mismatch: ${cpuSocket} vs ${mbSocket}`,
@@ -884,23 +1047,30 @@ export function AppProvider({ children }) {
     const totalWattage = Object.entries(builderConfig)
       .filter(([slot]) => slot !== "psu")
       .reduce((sum, [, component]) => sum + (component?.wattage || 0), 0);
-    const psuCapacity = psu?.wattage || 1000;
+    const psuCapacity = Number(psu?.wattage) || 0;
 
-    if (totalWattage > psuCapacity) {
+    if (totalWattage > 0 && !psu) {
+      issues.push({
+        type: "warning",
+        title: "Power supply not selected",
+        message: "Select a PSU to verify power capacity and headroom.",
+        category: "psu",
+      });
+    } else if (psu && totalWattage > psuCapacity) {
       issues.push({
         type: "error",
         title: "PSU Capacity Exceeded",
         message: `Total load (${totalWattage}W) exceeds PSU capacity (${psuCapacity}W). Select a higher-wattage PSU.`,
         category: "psu",
       });
-    } else if (totalWattage > psuCapacity * 0.9) {
+    } else if (psu && totalWattage > psuCapacity * 0.9) {
       issues.push({
         type: "warning",
         title: "PSU Wattage Headroom Low",
         message: `Total load (${totalWattage}W) approaches PSU limit (${psuCapacity}W). Recommend 1000W+ for safety margin.`,
         category: "psu",
       });
-    } else {
+    } else if (psu && totalWattage > 0) {
       passes.push(
         `Power Safety Headroom: ${Math.round((totalWattage / psuCapacity) * 100)}% load`,
       );
@@ -908,8 +1078,16 @@ export function AppProvider({ children }) {
 
     // 3. Thermal Clearance
     if (cpu && cooler) {
-      const supportedSockets = cooler.specs?.sockets || "";
-      if (supportedSockets && !supportedSockets.includes(cpu.specs?.socket)) {
+      const supportedSockets = cooler.specs?.sockets;
+      const cpuSocket = cpu.specs?.socket;
+      if (!supportedSockets || !cpuSocket) {
+        issues.push({
+          type: "warning",
+          title: "Cooler socket data missing",
+          message: "Add CPU socket and cooler support specifications to verify fit.",
+          category: "cooler",
+        });
+      } else if (!supportedSockets.includes(cpuSocket)) {
         issues.push({
           type: "error",
           title: "Cooler Socket Mismatch",
@@ -922,15 +1100,27 @@ export function AppProvider({ children }) {
     }
 
     // 4. Motherboard-to-Case Fit
-    if (mb && builderConfig.case && !motherboardFitsCase(mb, builderConfig.case)) {
-      issues.push({
-        type: "error",
-        title: "Motherboard Does Not Fit Case",
-        message: `${mb.name} (${mb.specs?.formFactor || "unknown form factor"}) does not fit inside ${builderConfig.case.name} (${builderConfig.case.specs?.formFactor || builderConfig.case.specs?.supportedFormFactors || "case form factor unknown"}).`,
-        category: "case",
-      });
-    } else if (mb && builderConfig.case) {
-      passes.push(`Case Fit: ${mb.specs?.formFactor || "Motherboard"} fits in ${builderConfig.case.name}`);
+    if (mb && builderConfig.case) {
+      const boardFormFactor = mb.specs?.formFactor;
+      const caseFormFactor = builderConfig.case.specs?.formFactor ||
+        builderConfig.case.specs?.supportedFormFactors;
+      if (!boardFormFactor || !caseFormFactor) {
+        issues.push({
+          type: "warning",
+          title: "Form-factor data missing",
+          message: "Add motherboard and case form-factor specifications to verify fit.",
+          category: "case",
+        });
+      } else if (!motherboardFitsCase(mb, builderConfig.case)) {
+        issues.push({
+          type: "error",
+          title: "Motherboard Does Not Fit Case",
+          message: `${mb.name} (${boardFormFactor}) does not fit inside ${builderConfig.case.name} (${caseFormFactor}).`,
+          category: "case",
+        });
+      } else {
+        passes.push(`Case Fit: ${boardFormFactor} fits in ${builderConfig.case.name}`);
+      }
     }
 
     // 5. GPU Length & Chassis Clearance
@@ -942,23 +1132,40 @@ export function AppProvider({ children }) {
         /[\d.]+/,
       )?.[0] || 0,
     );
-    if (
-      gpu &&
-      builderConfig.case &&
-      gpuLength &&
-      caseClearance &&
-      gpuLength > caseClearance
-    ) {
-      issues.push({
-        type: "error",
-        title: "GPU Chassis Clearance Failure",
-        message: `${gpu.name} is ${gpuLength}mm long, but ${builderConfig.case.name} supports ${caseClearance}mm.`,
-        category: "case",
-      });
-    } else {
-      passes.push("Chassis Clearance: GPU length verified");
+    if (gpu && builderConfig.case) {
+      if (!gpuLength || !caseClearance) {
+        issues.push({
+          type: "warning",
+          title: "GPU clearance data missing",
+          message: "Add GPU length and case GPU-clearance specifications to verify fit.",
+          category: "case",
+        });
+      } else if (gpuLength > caseClearance) {
+        issues.push({
+          type: "error",
+          title: "GPU Chassis Clearance Failure",
+          message: `${gpu.name} is ${gpuLength}mm long, but ${builderConfig.case.name} supports ${caseClearance}mm.`,
+          category: "case",
+        });
+      } else {
+        passes.push(`Chassis Clearance: ${gpuLength}mm GPU fits ${caseClearance}mm case`);
+      }
     }
-    passes.push("DDR5 EXPO & XMP 3.0 Memory Profile Certified");
+
+    if (mb && builderConfig.ram) {
+      const boardMemoryType = mb.specs?.memoryType;
+      const ramType = builderConfig.ram.specs?.type;
+      if (boardMemoryType && ramType && boardMemoryType !== ramType) {
+        issues.push({
+          type: "error",
+          title: "Memory type mismatch",
+          message: `${builderConfig.ram.name} (${ramType}) does not match ${mb.name} (${boardMemoryType}).`,
+          category: "ram",
+        });
+      } else if (boardMemoryType && ramType) {
+        passes.push(`Memory Type Match: ${ramType}`);
+      }
+    }
 
     return {
       isCompatible: issues.filter((i) => i.type === "error").length === 0,
@@ -968,7 +1175,7 @@ export function AppProvider({ children }) {
   }, [builderConfig]);
 
   // Dynamic Component Recommendation Engine (Tailored to Selected CPU & Priorities)
-  const getRecommendationsForSlot = (categoryKey) => {
+  const getRecommendationsForSlot = useCallback((categoryKey) => {
     const currentCpu = builderConfig.cpu;
     const cpuSocket = currentCpu?.specs?.socket || "AM5";
 
@@ -1038,100 +1245,136 @@ export function AppProvider({ children }) {
     };
 
     let candidates = products
+      .filter((p) => p.category !== "fans")
       .filter((p) => p.category === categoryKey)
       .filter(isCompatibleCandidate);
 
-    if (categoryKey === "motherboard") {
-      // Prioritize motherboards with matching socket
-      return candidates.map((mb) => ({
-        ...mb,
-        isRecommendedMatch: mb.specs?.socket === cpuSocket,
-        recommendationReason:
-          mb.specs?.socket === cpuSocket
-            ? `⭐ Direct Match for ${currentCpu?.name || "Selected CPU"} (${cpuSocket})`
-            : `Requires ${mb.specs?.socket} Socket`,
-      }));
-    }
+    const requestedWeights = {
+      budget: Math.max(0, Number(priorityProfile.budget) || 0),
+      performance: Math.max(0, Number(priorityProfile.performance) || 0),
+      upgradability: Math.max(0, Number(priorityProfile.upgradability) || 0),
+    };
+    const weights =
+      requestedWeights.budget + requestedWeights.performance + requestedWeights.upgradability > 0
+        ? requestedWeights
+        : { budget: 1, performance: 1, upgradability: 1 };
+    const weightTotal = weights.budget + weights.performance + weights.upgradability;
+    const maximumPrice = Math.max(...candidates.map((product) => Number(product.price) || 0), 1);
+    const maximumValue = Math.max(
+      ...candidates.map((product) =>
+        (Number(product.performanceScore) || 0) / Math.max(Number(product.price) || 1, 1),
+      ),
+      0.001,
+    );
+    const featureValue = (product) => {
+      const rawValue = categoryKey === "psu"
+        ? product.wattage
+        : categoryKey === "case"
+          ? product.specs?.gpuClearance
+          : categoryKey === "ram" || categoryKey === "storage"
+            ? product.specs?.capacity
+            : categoryKey === "gpu"
+              ? product.specs?.vram
+              : categoryKey === "cpu"
+                ? product.specs?.cores
+                : categoryKey === "cooler"
+                  ? product.specs?.radiator
+                  : product.specs?.slots;
+      return Number.parseFloat(String(rawValue || "").match(/[\d.]+/)?.[0] || 0);
+    };
+    const maximumFeature = Math.max(...candidates.map(featureValue), 1);
+    const primaryPriority = Object.entries(weights).sort((a, b) => b[1] - a[1])[0]?.[0] || "performance";
+    const priorityLabels = {
+      budget: "price efficiency",
+      performance: "performance",
+      upgradability: "upgrade potential",
+    };
 
-    if (categoryKey === "cooler") {
-      return candidates.map((clr) => ({
-        ...clr,
-        isRecommendedMatch: clr.performanceScore >= 95,
-        recommendationReason:
-          clr.performanceScore >= 95
-            ? "⭐ High-Efficiency Thermal Dispersion (Zero Throttling)"
-            : "Standard Air Cooling",
+    return candidates
+      .map((product) => {
+        const price = Number(product.price) || maximumPrice;
+        const affordabilityScore = Math.max(0, 100 - (price / maximumPrice) * 100);
+        const performanceScore = Math.max(
+          0,
+          Math.min(100, Number(product.performanceScore) || 50),
+        );
+        const valueScore = Math.min(
+          100,
+          ((Number(product.performanceScore) || 0) / Math.max(price, 1) / maximumValue) * 100,
+        );
+        const budgetScore = (affordabilityScore + valueScore) / 2;
+        const upgradeScore = Math.min(100, (featureValue(product) / maximumFeature) * 100);
+        const score = Math.round(
+          (budgetScore * weights.budget +
+            performanceScore * weights.performance +
+            upgradeScore * weights.upgradability) /
+            weightTotal,
+        );
+        return { ...product, recommendationScore: score };
+      })
+      .sort((a, b) => b.recommendationScore - a.recommendationScore)
+      .map((product, index) => ({
+        ...product,
+        isRecommendedMatch: index === 0,
+        recommendationReason: `${product.recommendationScore}/100 match; prioritizes ${priorityLabels[primaryPriority]}.`,
       }));
-    }
-
-    if (categoryKey === "ram") {
-      return candidates.map((ram) => ({
-        ...ram,
-        isRecommendedMatch:
-          ram.specs?.speed?.includes("6000") ||
-          ram.specs?.speed?.includes("6400"),
-        recommendationReason: "⭐ Sweet Spot DDR5 Latency (CL30/CL32)",
-      }));
-    }
-
-    if (categoryKey === "psu") {
-      return candidates.map((p) => ({
-        ...p,
-        isRecommendedMatch: p.wattage >= 850,
-        recommendationReason:
-          p.wattage >= 850
-            ? "⭐ ATX 3.0 Ready with Native 12VHPWR"
-            : "Standard ATX",
-      }));
-    }
-
-    return candidates.map((p) => ({
-      ...p,
-      isRecommendedMatch: p.performanceScore >= 90,
-      recommendationReason: "⭐ High-Performance Tier Pairing",
-    }));
-  };
+  }, [builderConfig, products, priorityProfile]);
 
   // Future Upgrade Advisor
   const futureUpgradesAdvice = useMemo(() => {
-    const currentMb = builderConfig.motherboard;
-    const currentPsu = builderConfig.psu;
-    const currentRam = builderConfig.ram;
-
-    const advices = [];
-
-    if (currentMb?.specs?.socket === "AM5") {
-      advices.push({
-        title: "Long-Term CPU Socket Longevity",
-        desc: "AMD AM5 platform is supported through 2027+, allowing drop-in upgrades to Zen 6 CPUs without changing motherboards.",
+    const numericSpec = (value) =>
+      Number.parseFloat(String(value || "").match(/[\d.]+/)?.[0] || 0);
+    const upgradeSlots = ["cpu", "gpu", "motherboard", "ram", "storage", "psu", "cooler", "case"];
+    return upgradeSlots.flatMap((slot) => {
+      const current = builderConfig[slot];
+      if (!current) return [];
+      const currentCapacity = slot === "psu"
+        ? Number(current.wattage) || 0
+        : slot === "case"
+          ? numericSpec(current.specs?.gpuClearance)
+          : slot === "ram" || slot === "storage"
+            ? numericSpec(current.specs?.capacity)
+            : Number(current.performanceScore) || 0;
+      const upgrade = getRecommendationsForSlot(slot).find((candidate) => {
+        if (candidate.id === current.id) return false;
+        const candidateCapacity = slot === "psu"
+          ? Number(candidate.wattage) || 0
+          : slot === "case"
+            ? numericSpec(candidate.specs?.gpuClearance)
+            : slot === "ram" || slot === "storage"
+              ? numericSpec(candidate.specs?.capacity)
+              : Number(candidate.performanceScore) || 0;
+        return candidateCapacity > currentCapacity;
       });
-    }
-
-    if (currentPsu?.wattage >= 1000) {
-      advices.push({
-        title: "+400W Power Expansion Headroom",
-        desc: "Your 1000W+ ATX 3.0 power supply has massive transient headroom for next-gen RTX 60-Series GPUs.",
-      });
-    }
-
-    if (currentRam?.specs?.capacity?.includes("32GB")) {
-      advices.push({
-        title: "Dual-Channel Expansion Ready",
-        desc: "Motherboard contains 2 vacant DIMM slots to easily expand to 64GB DDR5 memory in the future.",
-      });
-    }
-
-    advices.push({
-      title: "PCIe 5.0 High-Speed NVMe Slot 2",
-      desc: "Secondary Gen5 M.2 bay available for adding 4TB-8TB ultra-fast game storage.",
+      if (!upgrade) return [];
+      const upgradeDetail = slot === "psu"
+        ? `${upgrade.wattage}W vs ${current.wattage || 0}W`
+        : slot === "case"
+          ? `${upgrade.specs?.gpuClearance || "More GPU clearance"} clearance`
+          : slot === "ram" || slot === "storage"
+            ? `${upgrade.specs?.capacity || "Higher capacity"} capacity`
+            : `Performance score ${upgrade.performanceScore || "higher"}`;
+      return [{
+        slot,
+        product: upgrade,
+        title: `Upgrade ${slot.toUpperCase()}: ${upgrade.name}`,
+        desc: `Compatible alternative to ${current.name}; ${upgradeDetail}.`,
+      }];
     });
-
-    return advices;
-  }, [builderConfig]);
+  }, [builderConfig, getRecommendationsForSlot]);
 
   // Checkout & Place Order
   const placeOrder = async (orderData) => {
     if (!requireAuth(null, "place orders")) return null;
+
+    const selectedIds = new Set(
+      orderData.selectedCartItemIds ?? cart.map((item) => item.id),
+    );
+    const selectedCartItems = cart.filter((item) => selectedIds.has(item.id));
+    if (selectedCartItems.length === 0) {
+      showToast("Select items first", "Choose at least one item to check out.", "warning");
+      return null;
+    }
 
     const orderId = "NG-" + Math.floor(10000 + Math.random() * 90000);
     const newOrder = {
@@ -1146,7 +1389,15 @@ export function AppProvider({ children }) {
       paymentMethod: orderData.paymentMethod || "Cash on Delivery",
       gcashReference: orderData.gcashReference || "",
       promoCode: orderData.promoCode || "",
-      items: cart.map((item) => ({
+      customerPhone: orderData.customerPhone || "",
+      shippingAddress: orderData.shippingAddress || "",
+      city: orderData.city || "",
+      postalCode: orderData.postalCode || "",
+      country: orderData.country || "",
+      shippingMethod: orderData.shippingMethod || "express",
+      shippingCost: orderData.shippingCost || 0,
+      tax: orderData.tax || 0,
+      items: selectedCartItems.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,
         price: item.product.price,
@@ -1154,14 +1405,24 @@ export function AppProvider({ children }) {
       })),
     };
 
+    let persistedOrder;
     try {
-      const persistedOrder = await dataApi.createOrder(authToken, newOrder);
+      persistedOrder = await dataApi.createOrder(authToken, newOrder);
       setOrders((prev) => [persistedOrder, ...prev]);
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("promotion has already been used")
+      ) {
+        throw error;
+      }
       showToast("Order could not be saved", error.message, "error");
       return null;
     }
-    clearCart();
+    const remainingCart = cart.filter((item) => !selectedIds.has(item.id));
+    setCart(remainingCart);
+    setCheckoutItemIds(remainingCart.length ? [] : null);
+    persistAccount({ cart: remainingCart });
 
     try {
       confetti({
@@ -1179,7 +1440,7 @@ export function AppProvider({ children }) {
       `Order #${orderId} has been confirmed.`,
       "success",
     );
-    return newOrder;
+    return persistedOrder;
   };
 
   // Admin Mutations
@@ -1200,6 +1461,60 @@ export function AppProvider({ children }) {
       );
     } catch (error) {
       showToast("Order update failed", error.message, "warning");
+    }
+  };
+
+  const updateOrderPaymentStatus = async (orderId, paymentStatus) => {
+    try {
+      const updatedOrder = await dataApi.updateOrderPaymentStatus(
+        authToken,
+        orderId,
+        paymentStatus,
+      );
+      setOrders((prev) =>
+        prev.map((order) => (order.id === orderId ? updatedOrder : order)),
+      );
+      showToast(
+        "Payment Status Updated",
+        `Order ${orderId} payment is ${paymentStatus.toLowerCase()}.`,
+        "success",
+      );
+    } catch (error) {
+      showToast("Payment status update failed", error.message, "warning");
+    }
+  };
+
+  const replyToReview = async (reviewId, reply) => {
+    try {
+      const updatedReview = await dataApi.replyToReview(
+        authToken,
+        reviewId,
+        reply,
+      );
+      setAdminReviews((prev) =>
+        prev.map((review) => review.id === reviewId ? updatedReview : review),
+      );
+      setMyReviews((prev) =>
+        prev.map((review) => review.id === reviewId ? updatedReview : review),
+      );
+      setReviews((prev) =>
+        prev.map((review) => review.id === reviewId ? updatedReview : review),
+      );
+      showToast("Reply published", "Your response is visible with the review.", "success");
+    } catch (error) {
+      showToast("Reply could not be saved", error.message, "warning");
+    }
+  };
+
+  const deleteReview = async (reviewId) => {
+    try {
+      await dataApi.deleteReview(authToken, reviewId);
+      setAdminReviews((prev) => prev.filter((review) => review.id !== reviewId));
+      setMyReviews((prev) => prev.filter((review) => review.id !== reviewId));
+      setReviews((prev) => prev.filter((review) => review.id !== reviewId));
+      showToast("Review deleted", "The review was removed.", "info");
+    } catch (error) {
+      showToast("Review could not be deleted", error.message, "warning");
     }
   };
 
@@ -1253,8 +1568,8 @@ export function AppProvider({ children }) {
       id: (newProduct.category || "comp") + "-" + Date.now(),
       createdAt: new Date().toISOString(),
       isNewArrival: true,
-      rating: 5.0,
-      reviewsCount: 1,
+      rating: 0,
+      reviewsCount: 0,
       inStock: (newProduct.stock || 1) > 0,
     };
     try {
@@ -1262,11 +1577,11 @@ export function AppProvider({ children }) {
         authToken,
         productWithId,
       );
-      const normalizedProduct = {
+      const normalizedProduct = normalizeCatalogProducts([{
         ...persistedProduct,
         createdAt: persistedProduct.createdAt || new Date().toISOString(),
         isNewArrival: persistedProduct.isNewArrival ?? true,
-      };
+      }])[0];
       setProducts((prev) => [normalizedProduct, ...prev]);
       showToast(
         "New Arrival Live",
@@ -1280,11 +1595,12 @@ export function AppProvider({ children }) {
 
   const updateProduct = async (updatedProduct) => {
     try {
-      const persistedProduct = await dataApi.updateProduct(
+      const updatedProductResponse = await dataApi.updateProduct(
         authToken,
         updatedProduct.id,
         updatedProduct,
       );
+      const persistedProduct = normalizeCatalogProducts([updatedProductResponse])[0];
       setProducts((prev) =>
         prev.map((product) =>
           product.id === persistedProduct.id ? persistedProduct : product,
@@ -1332,9 +1648,13 @@ export function AppProvider({ children }) {
         setUserRole,
         currentPage,
         setCurrentPage,
-        products,
+        adminTab,
+        setAdminTab,
+        products: productsWithReviewStats,
         prebuilts,
         cart,
+        checkoutItemIds,
+        setCheckoutItemIds,
         addToCart,
         addCustomBuildToCart,
         removeFromCart,
@@ -1352,6 +1672,16 @@ export function AppProvider({ children }) {
         savedBuilds,
         setSavedBuilds,
         orders,
+        notifications,
+        markNotificationRead,
+        markAllNotificationsRead,
+        reviews,
+        myReviews,
+        adminReviews,
+        submitReview,
+        getProductReviewSummary,
+        replyToReview,
+        deleteReview,
         users,
         toggleUserStatus,
         deleteUser,
@@ -1361,6 +1691,9 @@ export function AppProvider({ children }) {
         updateModelAsset,
         deleteModelAsset,
         updateProfile,
+        refreshProfile,
+        connectDiscord,
+        disconnectDiscord,
         addAddress,
         addresses,
         toasts,
@@ -1375,6 +1708,7 @@ export function AppProvider({ children }) {
         authUser,
         authToken,
         requestVerificationCode,
+        resetPassword,
         loginUser,
         loginWithGoogle,
         logout,
@@ -1402,6 +1736,7 @@ export function AppProvider({ children }) {
         futureUpgradesAdvice,
         placeOrder,
         updateOrderStatus,
+        updateOrderPaymentStatus,
         addProduct,
         updateProduct,
         deleteProduct,

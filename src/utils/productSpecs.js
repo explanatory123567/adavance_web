@@ -139,6 +139,7 @@ export const buildProductSpecs = (productData = {}) => {
     addIfPresent("formFactor", formFactor || rest.formFactor);
     addIfPresent("driveSupport", rest.driveSupport);
     addIfPresent("fanSupport", rest.fanSupport);
+    specs.includedFans = "Free fans included";
     addIfPresent("dimensions", rest.dimensions || rest.size);
   }
 
@@ -150,12 +151,6 @@ export const buildProductSpecs = (productData = {}) => {
     addIfPresent("socket", socket);
     addIfPresent("radiator", rest.radiator || rest.size || rest.coolingType);
     addIfPresent("noiseLevel", rest.noiseLevel);
-  }
-
-  if (category === "fans") {
-    addIfPresent("airflow", airflow || rest.airflow);
-    addIfPresent("size", rest.size || "120mm");
-    addIfPresent("rpm", rest.rpm);
   }
 
   addIfPresent("length", length);

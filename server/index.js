@@ -32,6 +32,40 @@ app.use(
 );
 app.use(express.json({ limit: "8mb" }));
 
+app.post("/api/newsletter/subscribe", async (req, res) => {
+  const email =
+    typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  if (
+    email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    return res.status(400).json({ message: "Enter a valid email address." });
+  }
+
+  if (!dbConnected) {
+    const alreadySubscribed = fallbackNewsletterSubscribers.has(email);
+    fallbackNewsletterSubscribers.add(email);
+    return res.status(alreadySubscribed ? 200 : 201).json({
+      message: alreadySubscribed
+        ? "This email is already subscribed."
+        : "Subscription saved for this server session.",
+      alreadySubscribed,
+    });
+  }
+
+  try {
+    await NewsletterSubscriber.create({ email });
+    return res.status(201).json({ message: "Subscription saved." });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res
+        .status(200)
+        .json({ message: "This email is already subscribed.", alreadySubscribed: true });
+    }
+    throw error;
+  }
+});
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -49,6 +83,8 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
+    discordId: { type: String, unique: true, sparse: true },
+    discordUsername: { type: String, default: "" },
     avatar: { type: String, default: "" },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
@@ -90,8 +126,17 @@ const orderSchema = new mongoose.Schema(
     id: { type: String, unique: true },
     customer: String,
     email: String,
+    customerPhone: String,
+    shippingAddress: String,
+    city: String,
+    postalCode: String,
+    country: String,
+    shippingMethod: String,
+    shippingCost: Number,
+    tax: Number,
     total: Number,
     status: { type: String, default: "Processing" },
+    statusHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
     trackingNumber: String,
     paymentMethod: {
       type: String,
@@ -108,6 +153,51 @@ const orderSchema = new mongoose.Schema(
     promoDiscount: { type: Number, min: 0, max: 1, default: 0 },
     items: mongoose.Schema.Types.Mixed,
     date: String,
+  },
+  { timestamps: true },
+);
+
+const notificationSchema = new mongoose.Schema(
+  {
+    id: { type: String, unique: true },
+    audience: { type: String, required: true, index: true },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+    type: { type: String, default: "info" },
+    page: { type: String, default: "home" },
+    tab: { type: String, default: "" },
+    readBy: { type: [String], default: [] },
+  },
+  { timestamps: true },
+);
+
+const reviewSchema = new mongoose.Schema(
+  {
+    id: { type: String, unique: true },
+    productId: { type: String, required: true, index: true },
+    productName: { type: String, required: true },
+    userId: { type: String, required: true },
+    userName: { type: String, required: true },
+    email: { type: String, required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    title: { type: String, required: true, maxlength: 100 },
+    comment: { type: String, required: true, maxlength: 2000 },
+    adminReply: { type: String, default: "", maxlength: 2000 },
+    adminReplyAt: Date,
+    status: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
+      default: "Approved",
+      index: true,
+    },
+  },
+  { timestamps: true },
+);
+reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
+
+const newsletterSubscriberSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, trim: true, lowercase: true, unique: true },
   },
   { timestamps: true },
 );
@@ -163,6 +253,13 @@ const Product = mongoose.model("Product", productSchema);
 const Order = mongoose.model("Order", orderSchema);
 const Address = mongoose.model("Address", addressSchema);
 const ModelAsset = mongoose.model("ModelAsset", modelAssetSchema);
+const Notification = mongoose.model("Notification", notificationSchema);
+const Review = mongoose.model("Review", reviewSchema);
+const NewsletterSubscriber = mongoose.model(
+  "NewsletterSubscriber",
+  newsletterSubscriberSchema,
+);
+const fallbackNewsletterSubscribers = new Set();
 
 function buildModelAssetLookup(id) {
   const rawId = String(id ?? "").trim();
@@ -319,7 +416,7 @@ const fallbackCatalog = [
     description: "Dual-chamber tempered-glass chassis.",
     performanceScore: 88,
     wattage: 0,
-    specs: { gpuClearance: "420mm" },
+    specs: { gpuClearance: "420mm", includedFans: "Free fans included" },
     featured: true,
     isPopular: true,
     rating: 4.9,
@@ -342,24 +439,6 @@ const fallbackCatalog = [
     isPopular: true,
     rating: 4.7,
     reviewsCount: 96,
-    inStock: true,
-  },
-  {
-    id: "fans-1",
-    name: "Lian Li UNI FAN SL-INFINITY 120 Triple Pack",
-    brand: "Lian Li",
-    category: "fans",
-    price: 99,
-    stock: 20,
-    image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80",
-    description: "Linked high-airflow RGB fan system.",
-    performanceScore: 87,
-    wattage: 12,
-    specs: { airflow: "63.1 CFM" },
-    featured: false,
-    isPopular: true,
-    rating: 4.7,
-    reviewsCount: 88,
     inStock: true,
   },
 ];
@@ -385,7 +464,44 @@ const fallbackOrders = [
   { id: "NG-10004", date: "2026-08-13", customer: "Noah Smith", total: 2760, status: "Paid", email: "admin@nextgear.local" },
   { id: "NG-10005", date: "2026-08-15", customer: "Isla Gomez", total: 6240, status: "Processing", email: "admin@nextgear.local" },
 ];
+const fallbackNotifications = [];
+const fallbackReviews = [];
 let dbConnected = false;
+const discordOAuthStates = new Map();
+
+async function publishNotification(notificationData) {
+  const notification = {
+    id: `NT-${Date.now()}-${crypto.randomInt(1000, 10000)}`,
+    createdAt: new Date(),
+    ...notificationData,
+    readBy: [],
+  };
+  try {
+    if (dbConnected) await Notification.create(notification);
+    else fallbackNotifications.unshift(notification);
+    if (!dbConnected) fallbackNotifications.splice(200);
+  } catch (error) {
+    console.error("Notification could not be saved:", error.message);
+  }
+}
+
+function serializeNotification(notification, email) {
+  const { _id, readBy = [], ...data } = notification;
+  return {
+    ...data,
+    id: data.id || _id?.toString(),
+    isRead: readBy.includes(email),
+  };
+}
+
+function serializeReview(review, includePrivate = false) {
+  const { _id, email, userId, ...data } = review;
+  return {
+    ...data,
+    id: data.id || _id?.toString(),
+    ...(includePrivate ? { email, userId } : {}),
+  };
+}
 
 const transporter = process.env.SMTP_HOST
   ? nodemailer.createTransport({
@@ -406,10 +522,12 @@ function createToken(user) {
 
 function publicUser(user) {
   return {
-    id: user._id,
+    id: user._id?.toString() || user.id,
     name: user.name,
     username: user.username,
     email: user.email,
+    discordId: user.discordId || "",
+    discordUsername: user.discordUsername || "",
     avatar: user.avatar || "",
     role: user.role,
     status: user.status,
@@ -531,23 +649,24 @@ function issueCode(email, purpose) {
   return code;
 }
 
-async function sendCode(email, code) {
+async function sendCode(email, code, purpose = "register") {
+  const isPasswordReset = purpose === "reset";
   if (!transporter) {
-    console.log(`[verification-code] ${email}: ${code}`);
+    console.log(`[${isPasswordReset ? "password-reset" : "verification"}-code] ${email}: ${code}`);
     return;
   }
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: email,
-    subject: "Next Gear verification code",
-    text: `Your Next Gear verification code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`,
+    subject: isPasswordReset ? "Next Gear password reset code" : "Next Gear verification code",
+    text: `Your Next Gear ${isPasswordReset ? "password reset" : "verification"} code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`,
     html: `
       <div style="margin:0;background:#080b16;padding:40px 16px;font-family:Arial,sans-serif;color:#e6edf7;">
         <div style="max-width:520px;margin:0 auto;background:#101729;border:1px solid #263653;border-radius:18px;overflow:hidden;">
           <div style="height:5px;background:linear-gradient(90deg,#00d4ff,#9d4edd,#3b82f6);"></div>
           <div style="padding:34px 34px 30px;">
             <div style="font-size:12px;letter-spacing:3px;color:#00d4ff;font-weight:700;">NEXT GEAR / IDENTITY</div>
-            <h1 style="margin:14px 0 10px;font-size:28px;color:#ffffff;">Confirm your access</h1>
+            <h1 style="margin:14px 0 10px;font-size:28px;color:#ffffff;">${isPasswordReset ? "Reset your password" : "Confirm your access"}</h1>
             <p style="margin:0;color:#96a6bf;font-size:15px;line-height:1.6;">Use the one-time security code below to continue. This code expires in 10 minutes.</p>
             <div style="margin:28px 0;padding:22px;text-align:center;background:#080b16;border:1px solid #27445e;border-radius:12px;">
               <div style="font-size:11px;letter-spacing:3px;color:#8293ad;font-weight:700;margin-bottom:9px;">VERIFICATION CODE</div>
@@ -593,27 +712,41 @@ app.post("/api/promotions/random-offer", requireAuth, async (req, res) => {
 app.post("/api/auth/request-code", async (req, res) => {
   try {
     const { email: identifier, purpose = "register", captchaToken } = req.body;
+    if (!["register", "login", "reset"].includes(purpose))
+      return res.status(400).json({ message: "Unsupported verification purpose." });
     if (!identifier || !(await verifyCaptcha(captchaToken)))
       return res
         .status(400)
         .json({ message: "Valid Google reCAPTCHA verification is required." });
     const normalizedIdentifier = identifier.trim().toLowerCase();
-    const existingUser = await User.findOne({
-      $or: [
-        { email: normalizedIdentifier },
-        { username: normalizedIdentifier },
-      ],
-    });
+    const existingUser = dbConnected
+      ? await User.findOne({
+          $or: [
+            { email: normalizedIdentifier },
+            { username: normalizedIdentifier },
+          ],
+        })
+      : fallbackUsers.find(
+          (user) => user.email === normalizedIdentifier || user.username === normalizedIdentifier,
+        );
     if (purpose === "register" && existingUser)
       return res
         .status(409)
         .json({ message: "An account with this email already exists." });
     if (purpose === "login" && !existingUser)
       return res.status(401).json({ message: "Account not found." });
-    const destination =
-      purpose === "login" ? existingUser.email : normalizedIdentifier;
-    await sendCode(destination, issueCode(destination, purpose));
-    res.json({ message: "Verification code sent." });
+    if (purpose === "reset" && !existingUser) {
+      return res.json({ message: "If the account exists, a reset code was sent." });
+    }
+    const destination = purpose === "register"
+      ? normalizedIdentifier
+      : existingUser.email;
+    await sendCode(destination, issueCode(destination, purpose), purpose);
+    res.json({
+      message: purpose === "reset"
+        ? "If the account exists, a reset code was sent."
+        : "Verification code sent.",
+    });
   } catch (error) {
     console.error("Verification email failed:", error.message);
     res
@@ -623,6 +756,29 @@ app.post("/api/auth/request-code", async (req, res) => {
           "Unable to send verification code. Check SMTP_HOST, SMTP_USER, and SMTP_PASSWORD.",
       });
   }
+});
+
+app.post("/api/auth/reset-password", async (req, res) => {
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const code = String(req.body.code || "").trim();
+  const password = String(req.body.password || "");
+  if (!email || password.length < 8) {
+    return res.status(400).json({ message: "Enter a valid email and a password with at least 8 characters." });
+  }
+  if (!consumeCode(email, "reset", code)) {
+    return res.status(400).json({ message: "Reset code is invalid or expired." });
+  }
+  if (!dbConnected) {
+    const user = fallbackUsers.find((item) => item.email === email);
+    if (!user) return res.status(400).json({ message: "Reset code is invalid or expired." });
+    user.passwordHash = await bcrypt.hash(password, 12);
+    return res.json({ message: "Password updated successfully." });
+  }
+  const user = await User.findOne({ email });
+  if (!user) return res.status(400).json({ message: "Reset code is invalid or expired." });
+  user.passwordHash = await bcrypt.hash(password, 12);
+  await user.save();
+  res.json({ message: "Password updated successfully." });
 });
 
 app.post("/api/auth/register", async (req, res) => {
@@ -847,6 +1003,186 @@ app.get("/api/catalog", async (req, res) => {
   if (!dbConnected) return res.json(fallbackCatalog);
   res.json(await Product.find().sort({ category: 1, name: 1 }).lean());
 });
+app.get("/api/notifications", requireAuth, async (req, res) => {
+  const audience = req.auth.role === "admin" ? "admins" : "users";
+  if (!dbConnected) {
+    return res.json(
+      fallbackNotifications
+        .filter((item) => item.audience === audience || item.audience === req.auth.email)
+        .map((item) => serializeNotification(item, req.auth.email)),
+    );
+  }
+  const notifications = await Notification.find({
+    audience: { $in: [audience, req.auth.email] },
+  })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+  res.json(notifications.map((item) => serializeNotification(item, req.auth.email)));
+});
+app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
+  const audiences = [req.auth.role === "admin" ? "admins" : "users", req.auth.email];
+  if (!dbConnected) {
+    const notification = fallbackNotifications.find(
+      (item) => item.id === req.params.id && audiences.includes(item.audience),
+    );
+    if (!notification) return res.status(404).json({ message: "Notification not found." });
+    if (!notification.readBy.includes(req.auth.email)) notification.readBy.push(req.auth.email);
+    return res.json(serializeNotification(notification, req.auth.email));
+  }
+  const notification = await Notification.findOneAndUpdate(
+    { id: req.params.id, audience: { $in: audiences } },
+    { $addToSet: { readBy: req.auth.email } },
+    { new: true },
+  ).lean();
+  if (!notification) return res.status(404).json({ message: "Notification not found." });
+  res.json(serializeNotification(notification, req.auth.email));
+});
+app.post("/api/notifications/read-all", requireAuth, async (req, res) => {
+  const audiences = [req.auth.role === "admin" ? "admins" : "users", req.auth.email];
+  if (!dbConnected) {
+    fallbackNotifications.forEach((item) => {
+      if (audiences.includes(item.audience) && !item.readBy.includes(req.auth.email)) {
+        item.readBy.push(req.auth.email);
+      }
+    });
+    return res.json({ updated: true });
+  }
+  await Notification.updateMany(
+    { audience: { $in: audiences }, readBy: { $ne: req.auth.email } },
+    { $addToSet: { readBy: req.auth.email } },
+  );
+  res.json({ updated: true });
+});
+app.get("/api/reviews", async (req, res) => {
+  if (!dbConnected) {
+    return res.json(
+      fallbackReviews
+        .map((review) => serializeReview(review)),
+    );
+  }
+  const reviews = await Review.find().sort({ createdAt: -1 }).lean();
+  res.json(reviews.map((review) => serializeReview(review)));
+});
+app.get("/api/reviews/mine", requireAuth, async (req, res) => {
+  if (!dbConnected) {
+    return res.json(
+      fallbackReviews
+        .filter((review) => review.userId === req.auth.sub)
+        .map((review) => serializeReview(review)),
+    );
+  }
+  const reviews = await Review.find({ userId: req.auth.sub })
+    .sort({ createdAt: -1 })
+    .lean();
+  res.json(reviews.map((review) => serializeReview(review)));
+});
+app.post("/api/reviews", requireAuth, async (req, res) => {
+  const productId = String(req.body.productId || "").trim();
+  const productName = String(req.body.productName || "").trim().slice(0, 160);
+  const title = String(req.body.title || "").trim().slice(0, 100);
+  const comment = String(req.body.comment || "").trim().slice(0, 2000);
+  const rating = Number(req.body.rating);
+  if (!productId || !productName || !title || comment.length < 10 ||
+      !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return res.status(400).json({ message: "Provide a product, 1-5 star rating, title, and review of at least 10 characters." });
+  }
+  const user = dbConnected
+    ? await User.findById(req.auth.sub).select("name").lean()
+    : fallbackUsers.find((item) => item.id === req.auth.sub || item.email === req.auth.email);
+  const reviewData = {
+    id: `RV-${Date.now()}-${crypto.randomInt(1000, 10000)}`,
+    productId,
+    productName,
+    userId: req.auth.sub,
+    userName: user?.name || req.auth.email.split("@")[0],
+    email: req.auth.email,
+    rating,
+    title,
+    comment,
+    status: "Approved",
+  };
+  if (!dbConnected) {
+    if (fallbackReviews.some((item) => item.productId === productId && item.userId === req.auth.sub)) {
+      return res.status(409).json({ message: "You have already reviewed this product." });
+    }
+    fallbackReviews.unshift({ ...reviewData, createdAt: new Date() });
+    await publishNotification({
+      audience: "admins",
+      title: "New customer review",
+      message: `${reviewData.userName} reviewed ${productName}.`,
+      type: "review",
+      page: "admin",
+      tab: "reviews",
+    });
+    return res.status(201).json(serializeReview(fallbackReviews[0]));
+  }
+  if (await Review.exists({ productId, userId: req.auth.sub })) {
+    return res.status(409).json({ message: "You have already reviewed this product." });
+  }
+  try {
+    const review = await Review.create(reviewData);
+    await publishNotification({
+      audience: "admins",
+      title: "New customer review",
+      message: `${reviewData.userName} reviewed ${productName}.`,
+      type: "review",
+      page: "admin",
+      tab: "reviews",
+    });
+    return res.status(201).json(serializeReview(review.toObject()));
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "You have already reviewed this product." });
+    }
+    throw error;
+  }
+});
+app.get("/api/admin/reviews", requireAuth, requireAdmin, async (req, res) => {
+  if (!dbConnected) {
+    return res.json(fallbackReviews.map((review) => serializeReview(review, true)));
+  }
+  const reviews = await Review.find().sort({ createdAt: -1 }).lean();
+  res.json(reviews.map((review) => serializeReview(review, true)));
+});
+app.patch("/api/admin/reviews/:id/reply", requireAuth, requireAdmin, async (req, res) => {
+  const adminReply = String(req.body.reply || "").trim().slice(0, 2000);
+  if (!adminReply) return res.status(400).json({ message: "Write a reply before saving." });
+  let review;
+  if (!dbConnected) {
+    review = fallbackReviews.find((item) => item.id === req.params.id);
+    if (review) {
+      review.adminReply = adminReply;
+      review.adminReplyAt = new Date();
+    }
+  } else {
+    review = await Review.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: { adminReply, adminReplyAt: new Date() } },
+      { new: true },
+    ).lean();
+  }
+  if (!review) return res.status(404).json({ message: "Review not found." });
+  await publishNotification({
+    audience: review.email,
+    title: "Response to your review",
+    message: `The store replied to your review of ${review.productName}.`,
+    type: "review",
+    page: "components",
+  });
+  res.json(serializeReview(review, true));
+});
+app.delete("/api/admin/reviews/:id", requireAuth, requireAdmin, async (req, res) => {
+  if (!dbConnected) {
+    const index = fallbackReviews.findIndex((item) => item.id === req.params.id);
+    if (index < 0) return res.status(404).json({ message: "Review not found." });
+    fallbackReviews.splice(index, 1);
+    return res.status(204).end();
+  }
+  const result = await Review.deleteOne({ id: req.params.id });
+  if (!result.deletedCount) return res.status(404).json({ message: "Review not found." });
+  res.status(204).end();
+});
 app.get("/api/orders", requireAuth, async (req, res) => {
   if (!dbConnected) {
     const visibleOrders = req.auth.role === "admin"
@@ -925,6 +1261,18 @@ app.patch("/api/account", requireAuth, async (req, res) => {
   if (Array.isArray(req.body.wishlist)) allowed.wishlist = req.body.wishlist;
   if (Array.isArray(req.body.savedBuilds))
     allowed.savedBuilds = req.body.savedBuilds;
+  if (!dbConnected) {
+    const user = fallbackUsers.find(
+      (item) => item.email === req.auth.email || item.id === req.auth.sub,
+    );
+    if (!user) return res.status(404).json({ message: "Account not found." });
+    Object.assign(user, allowed);
+    return res.json({
+      cart: user.cart || [],
+      wishlist: user.wishlist || [],
+      savedBuilds: user.savedBuilds || [],
+    });
+  }
   const user = await User.findByIdAndUpdate(
     req.auth.sub,
     { $set: allowed },
@@ -966,6 +1314,144 @@ app.patch("/api/profile", requireAuth, async (req, res) => {
   );
   if (!user) return res.status(404).json({ message: "Account not found." });
   res.json({ token: createToken(user), user: publicUser(user) });
+});
+app.get("/api/profile", requireAuth, async (req, res) => {
+  if (!dbConnected) {
+    const user = fallbackUsers.find(
+      (item) => item.email === req.auth.email || item.id === req.auth.sub,
+    );
+    if (!user) return res.status(404).json({ message: "Account not found." });
+    return res.json(publicUser(user));
+  }
+  const user = await User.findById(req.auth.sub).lean();
+  if (!user) return res.status(404).json({ message: "Account not found." });
+  res.json(publicUser(user));
+});
+app.post("/api/discord/connect", requireAuth, (req, res) => {
+  const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI } =
+    process.env;
+  if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET || !DISCORD_REDIRECT_URI) {
+    return res.status(503).json({
+      message:
+        "Discord OAuth is not configured. Set DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, and DISCORD_REDIRECT_URI in the API environment.",
+    });
+  }
+
+  const now = Date.now();
+  for (const [state, entry] of discordOAuthStates) {
+    if (entry.expiresAt <= now || entry.userId === req.auth.sub) {
+      discordOAuthStates.delete(state);
+    }
+  }
+  const state = crypto.randomBytes(32).toString("hex");
+  discordOAuthStates.set(state, {
+    userId: req.auth.sub,
+    expiresAt: now + 10 * 60 * 1000,
+  });
+
+  const authorizationUrl = new URL("https://discord.com/oauth2/authorize");
+  authorizationUrl.search = new URLSearchParams({
+    client_id: DISCORD_CLIENT_ID,
+    redirect_uri: DISCORD_REDIRECT_URI,
+    response_type: "code",
+    scope: "identify",
+    state,
+  }).toString();
+  res.json({ authorizationUrl: authorizationUrl.toString() });
+});
+app.get("/api/discord/callback", async (req, res) => {
+  const redirectToClient = (status) => {
+    const redirectUrl = new URL(clientOrigin);
+    redirectUrl.searchParams.set("discord", status);
+    return res.redirect(redirectUrl.toString());
+  };
+  const state = String(req.query.state || "");
+  const pending = discordOAuthStates.get(state);
+  if (state) discordOAuthStates.delete(state);
+  if (!pending || pending.expiresAt <= Date.now()) {
+    return redirectToClient("error");
+  }
+  if (req.query.error) return redirectToClient("cancelled");
+  const code = String(req.query.code || "");
+  if (!code) return redirectToClient("error");
+
+  try {
+    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        client_secret: process.env.DISCORD_CLIENT_SECRET,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI,
+      }),
+    });
+    if (!tokenResponse.ok) {
+      throw new Error(`Discord token exchange failed (${tokenResponse.status}).`);
+    }
+    const tokenData = await tokenResponse.json();
+    const discordResponse = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    if (!discordResponse.ok) {
+      throw new Error(`Discord profile request failed (${discordResponse.status}).`);
+    }
+    const discordUser = await discordResponse.json();
+    if (!discordUser.id || !discordUser.username) {
+      throw new Error("Discord did not return a valid user profile.");
+    }
+
+    if (!dbConnected) {
+      const user = fallbackUsers.find(
+        (item) => item.id === pending.userId || item._id === pending.userId,
+      );
+      const linkedUser = fallbackUsers.find(
+        (item) => item.discordId === discordUser.id && item !== user,
+      );
+      if (!user || linkedUser) throw new Error("This Discord account cannot be linked.");
+      user.discordId = discordUser.id;
+      user.discordUsername = discordUser.username;
+    } else {
+      const linkedUser = await User.findOne({ discordId: discordUser.id }).lean();
+      if (linkedUser && linkedUser._id.toString() !== pending.userId) {
+        throw new Error("This Discord account is already linked to another profile.");
+      }
+      const user = await User.findByIdAndUpdate(
+        pending.userId,
+        {
+          $set: {
+            discordId: discordUser.id,
+            discordUsername: discordUser.username,
+          },
+        },
+        { new: true, runValidators: true },
+      );
+      if (!user) throw new Error("Account not found.");
+    }
+    return redirectToClient("connected");
+  } catch (error) {
+    console.error("Discord account linking failed:", error.message);
+    return redirectToClient("error");
+  }
+});
+app.post("/api/discord/disconnect", requireAuth, async (req, res) => {
+  if (!dbConnected) {
+    const user = fallbackUsers.find(
+      (item) => item.email === req.auth.email || item.id === req.auth.sub,
+    );
+    if (!user) return res.status(404).json({ message: "Account not found." });
+    delete user.discordId;
+    delete user.discordUsername;
+    return res.json(publicUser(user));
+  }
+  const user = await User.findByIdAndUpdate(
+    req.auth.sub,
+    { $unset: { discordId: "", discordUsername: "" } },
+    { new: true },
+  );
+  if (!user) return res.status(404).json({ message: "Account not found." });
+  res.json(publicUser(user));
 });
 app.get("/api/users", requireAuth, requireRole(["admin"]), async (req, res) => {
   if (!dbConnected) {
@@ -1044,25 +1530,77 @@ app.delete("/api/addresses/:id", requireAuth, async (req, res) => {
   res.status(204).end();
 });
 app.post("/api/products", requireAuth, requireAdmin, async (req, res) => {
-  const product = await Product.create({
+  const productData = {
     ...req.body,
     id:
       req.body.id ||
       `${req.body.category || "product"}-${crypto.randomInt(100000, 999999)}`,
+  };
+  const product = dbConnected
+    ? await Product.create(productData)
+    : { ...productData, inStock: productData.stock > 0 };
+  if (!dbConnected) fallbackCatalog.unshift(product);
+  await publishNotification({
+    audience: "users",
+    title: "New product added",
+    message: `${product.name} is now available in the components shop.`,
+    type: "product",
+    page: "components",
   });
+  if ((Number(product.stock) || 0) <= 5) {
+    await publishNotification({
+      audience: "admins",
+      title: "Low stock alert",
+      message: `${product.name} was added with ${Number(product.stock) || 0} units in stock.`,
+      type: "inventory",
+      page: "admin",
+      tab: "inventory",
+    });
+  }
   res.status(201).json(product);
 });
 app.patch("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
-  const product = await Product.findOneAndUpdate(
-    { id: req.params.id },
-    { $set: req.body },
-    { new: true, runValidators: true },
-  ).lean();
+  let product;
+  let previousProduct;
+  if (!dbConnected) {
+    const index = fallbackCatalog.findIndex((item) => item.id === req.params.id);
+    if (index >= 0) {
+      previousProduct = fallbackCatalog[index];
+      fallbackCatalog[index] = { ...fallbackCatalog[index], ...req.body };
+      product = fallbackCatalog[index];
+    }
+  } else {
+    previousProduct = await Product.findOne({ id: req.params.id }).lean();
+    product = await Product.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: req.body },
+      { new: true, runValidators: true },
+    ).lean();
+  }
   if (!product) return res.status(404).json({ message: "Product not found." });
+  if (
+    previousProduct &&
+    (Number(previousProduct.stock) || 0) > 5 &&
+    (Number(product.stock) || 0) <= 5
+  ) {
+    await publishNotification({
+      audience: "admins",
+      title: "Low stock alert",
+      message: `${product.name} now has ${Number(product.stock) || 0} units in stock.`,
+      type: "inventory",
+      page: "admin",
+      tab: "inventory",
+    });
+  }
   res.json(product);
 });
 app.delete("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
-  await Product.deleteOne({ id: req.params.id });
+  if (!dbConnected) {
+    const index = fallbackCatalog.findIndex((item) => item.id === req.params.id);
+    if (index >= 0) fallbackCatalog.splice(index, 1);
+  } else {
+    await Product.deleteOne({ id: req.params.id });
+  }
   res.status(204).end();
 });
 app.patch(
@@ -1070,12 +1608,94 @@ app.patch(
   requireAuth,
   requireAdmin,
   async (req, res) => {
+    const allowedStatuses = ["Pending", "Processing", "Shipped", "Completed", "Cancelled"];
+    if (!allowedStatuses.includes(req.body.status)) {
+      return res.status(400).json({ message: "Choose a valid order status." });
+    }
+    if (!dbConnected) {
+      const demoOrder = fallbackOrders.find(
+        (item) => item.id === req.params.id,
+      );
+      if (!demoOrder) return res.status(404).json({ message: "Order not found." });
+      if (demoOrder.status === req.body.status) return res.json(demoOrder);
+      demoOrder.status = req.body.status;
+      demoOrder.statusHistory = [
+        ...(demoOrder.statusHistory || []),
+        { status: demoOrder.status, at: new Date(), note: "Status updated" },
+      ];
+      await publishNotification({
+        audience: demoOrder.email,
+        title: "Order status updated",
+        message: `Order #${demoOrder.id} is now ${demoOrder.status}.`,
+        type: "order",
+        page: "orders",
+      });
+      return res.json(demoOrder);
+    }
+
+    const existingOrder = await Order.findOne({ id: req.params.id }).lean();
+    if (!existingOrder) return res.status(404).json({ message: "Order not found." });
+    if (existingOrder.status === req.body.status) return res.json(existingOrder);
     const order = await Order.findOneAndUpdate(
       { id: req.params.id },
-      { $set: { status: req.body.status } },
+      {
+        $set: { status: req.body.status },
+        $push: {
+          statusHistory: {
+            status: req.body.status,
+            at: new Date(),
+            note: "Status updated",
+          },
+        },
+      },
       { new: true },
     ).lean();
     if (!order) return res.status(404).json({ message: "Order not found." });
+    await publishNotification({
+      audience: order.email,
+      title: "Order status updated",
+      message: `Order #${order.id} is now ${order.status}.`,
+      type: "order",
+      page: "orders",
+    });
+    res.json(order);
+  },
+);
+app.patch(
+  "/api/orders/:id/payment-status",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const allowedPaymentStatuses = ["Pending", "Paid", "Failed"];
+    if (!allowedPaymentStatuses.includes(req.body.paymentStatus)) {
+      return res.status(400).json({ message: "Choose a valid payment status." });
+    }
+
+    let order;
+    if (!dbConnected) {
+      order = fallbackOrders.find((item) => item.id === req.params.id);
+      if (order?.paymentMethod !== "GCash") {
+        return res.status(400).json({
+          message: "Only manual GCash payments can be verified here.",
+        });
+      }
+      if (order) order.paymentStatus = req.body.paymentStatus;
+    } else {
+      order = await Order.findOneAndUpdate(
+        { id: req.params.id, paymentMethod: "GCash" },
+        { $set: { paymentStatus: req.body.paymentStatus } },
+        { new: true, runValidators: true },
+      ).lean();
+    }
+    if (!order) return res.status(404).json({ message: "GCash order not found." });
+
+    await publishNotification({
+      audience: order.email,
+      title: "Payment status updated",
+      message: `Your GCash payment for order #${order.id} is ${req.body.paymentStatus.toLowerCase()}.`,
+      type: "order",
+      page: "orders",
+    });
     res.json(order);
   },
 );
@@ -1116,10 +1736,57 @@ app.post("/api/orders", requireAuth, async (req, res) => {
     return res
       .status(400)
       .json({ message: "Choose GCash or Cash on Delivery." });
-  if (paymentMethod === "GCash" && !gcashReference)
-    return res
-      .status(400)
-      .json({ message: "GCash reference number is required." });
+  const paymentReference =
+    typeof gcashReference === "string" ? gcashReference.trim() : "";
+  if (paymentMethod === "GCash" && !paymentReference)
+    return res.status(400).json({
+      message: "Enter the transaction reference from your GCash receipt.",
+    });
+  if (paymentMethod === "GCash" && paymentReference.length > 80)
+    return res.status(400).json({
+      message: "GCash reference must be 80 characters or fewer.",
+    });
+  if (!dbConnected) {
+    const order = {
+      ...req.body,
+      id: `NG-${crypto.randomInt(10000, 100000)}`,
+      email: req.auth.email,
+      date: new Date().toISOString().slice(0, 10),
+      status: paymentMethod === "GCash" ? "Pending" : "Processing",
+      trackingNumber: `NG-US-${crypto.randomInt(100000000, 1000000000)}`,
+      paymentStatus: paymentMethod === "GCash" ? "Pending" : "To Collect",
+      gcashReference: paymentMethod === "GCash" ? paymentReference : undefined,
+      statusHistory: [
+        {
+          status: paymentMethod === "GCash" ? "Pending" : "Processing",
+          at: new Date(),
+          note:
+            paymentMethod === "GCash"
+              ? "Awaiting manual GCash payment verification"
+              : "Order placed",
+        },
+      ],
+    };
+    fallbackOrders.unshift(order);
+    await Promise.all([
+      publishNotification({
+        audience: "admins",
+        title: "New order received",
+        message: `Order #${order.id} was placed by ${order.customer}.`,
+        type: "order",
+        page: "admin",
+        tab: "orders",
+      }),
+      publishNotification({
+        audience: req.auth.email,
+        title: "Order placed",
+        message: `Order #${order.id} is being processed.`,
+        type: "order",
+        page: "orders",
+      }),
+    ]);
+    return res.status(201).json(order);
+  }
   let validPromoCode;
   let validPromoDiscount = 0;
   let randomOffer;
@@ -1143,7 +1810,7 @@ app.post("/api/orders", requireAuth, async (req, res) => {
   const order = await Order.create({
     ...req.body,
     paymentMethod,
-    gcashReference: paymentMethod === "GCash" ? gcashReference : undefined,
+    gcashReference: paymentMethod === "GCash" ? paymentReference : undefined,
     promoCode: validPromoCode,
     promoDiscount: validPromoDiscount,
     paymentStatus: paymentMethod === "GCash" ? "Pending" : "To Collect",
@@ -1151,8 +1818,36 @@ app.post("/api/orders", requireAuth, async (req, res) => {
     email: req.auth.email,
     date: new Date().toISOString().slice(0, 10),
     trackingNumber: `NG-US-${crypto.randomInt(100000000, 1000000000)}`,
+    status: paymentMethod === "GCash" ? "Pending" : "Processing",
+    statusHistory: [
+      {
+        status: paymentMethod === "GCash" ? "Pending" : "Processing",
+        at: new Date(),
+        note:
+          paymentMethod === "GCash"
+            ? "Awaiting manual GCash payment verification"
+            : "Order placed",
+      },
+    ],
   });
   if (validPromoCode && validPromoCode !== "CYBER2026") await User.updateOne({ _id: req.auth.sub, "promoOffers.code": validPromoCode }, { $set: { "promoOffers.$.usedAt": new Date() } });
+  await Promise.all([
+    publishNotification({
+      audience: "admins",
+      title: "New order received",
+      message: `Order #${order.id} was placed by ${order.customer}.`,
+      type: "order",
+      page: "admin",
+      tab: "orders",
+    }),
+    publishNotification({
+      audience: req.auth.email,
+      title: "Order placed",
+      message: `Order #${order.id} is being processed.`,
+      type: "order",
+      page: "orders",
+    }),
+  ]);
   res.status(201).json(order);
 });
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Environment, Html, OrbitControls, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -14,12 +14,11 @@ const partPositions = {
   gpu: [0, 0, 0],
   storage: [0, 0, 0],
   psu: [0, -1.28, 0.12],
-  fans: [0, 0.70, 0.55],
 };
 
 const motherboardOffsets = {
-  cpu: [0, 0.18, 0.12],
-  cooler: [0, 0.38, 0.12],
+  cpu: [0.40, 0.05, -0.22],
+  cooler: [0.40, 0.38, -0.22],
   ram: [-0.55, 0.15, 0.12],
   storage: [0.6, 0.18, 0.1],
   gpu: [0, -0.2, 0.28],
@@ -33,7 +32,6 @@ const partModels = {
   ram: { size: [0.12, 0.65, 0.28], color: "#a78bfa" },
   storage: { size: [0.28, 0.12, 0.4], color: "#fbbf24" },
   psu: { size: [0.9, 0.24, 0.6], color: "#64748b" },
-  fans: { size: [0.24, 0.24, 0.1], color: "#34d399" },
 };
 
 const partColors = {
@@ -44,7 +42,6 @@ const partColors = {
   ram: "#a78bfa",
   storage: "#fbbf24",
   psu: "#64748b",
-  fans: "#34d399",
 };
 
 function GltfPart({
@@ -54,16 +51,17 @@ function GltfPart({
   rotation = [0, 0, 0],
 }) {
   const { scene } = useGLTF(url);
-
-  const clonedScene = scene.clone(true);
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone(true);
+    const bounds = new THREE.Box3().setFromObject(clone);
+    clone.position.sub(bounds.getCenter(new THREE.Vector3()));
+    return clone;
+  }, [scene]);
 
   return (
-    <primitive
-      object={clonedScene}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-    />
+    <group position={position} rotation={rotation} scale={scale}>
+      <primitive object={clonedScene} />
+    </group>
   );
 }
 
@@ -105,8 +103,6 @@ function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
     gpu: [0, 0, 0],
 
     psu: [0, 0, 0],
-
-    fans: [0, 0, 0],
   };
 
   const rotation =
@@ -120,7 +116,7 @@ function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
   const scales = {
     motherboard: 1.15,
 
-    cpu: 0.34,
+    cpu: 0.0061,
 
     cooler: 0.4,
 
@@ -131,8 +127,6 @@ function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
     gpu: 0.3,
 
     psu: 0.50,
-
-    fans: 0.38,
   };
 
   const scale =
@@ -158,9 +152,7 @@ function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
   const color =
     partColors[category] || "#ffffff";
   const glowColor =
-    ["motherboard", "cooler", "ram", "fans"].includes(category)
-      ? rgbColor
-      : color;
+    ["motherboard", "cooler", "ram"].includes(category) ? rgbColor : color;
 
   const dimensions =
     category === "motherboard"
@@ -177,8 +169,6 @@ function AssemblyPart({ category, component, rgbColor = "#67e8f9" }) {
       ? [0.32, 0.08, 0.42]
       : category === "psu"
       ? [0.85, 0.25, 0.60]
-      : category === "fans"
-      ? [0.30, 0.30, 0.10]
       : [0.50, 0.15, 0.40];
 
   return (

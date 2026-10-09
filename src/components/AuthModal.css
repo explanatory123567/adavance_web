@@ -147,6 +147,24 @@
 .auth-verification-row .btn {
   height: 42px;
 }
+.auth-reset-copy {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.auth-reset-action {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.auth-reset-back {
+  display: block;
+  margin: 12px auto 0;
+  color: var(--neon-cyan);
+  font-size: 12px;
+}
 @media (max-width: 540px) {
   .modal-overlay .modal-content {
     width: calc(100% - 24px);

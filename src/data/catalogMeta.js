@@ -31,7 +31,6 @@ export const CATEGORIES = [
     short: "Cooler",
     count: 19,
   },
-  { id: "fans", name: "Case Fans", icon: "Wind", short: "Fans", count: 14 },
 ];
 
 export const BRANDS = [

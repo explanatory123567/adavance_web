@@ -1,0 +1,20 @@
+Attribution for these extracted assets:
+- pc-configurator-case.glb
+- reference-pc/motherboard.glb
+- reference-pc/ram.glb
+- reference-pc/cooler.glb
+- reference-pc/gpu.glb
+- reference-pc/storage.glb
+- reference-pc/psu.glb
+
+This work is based on "Custom Gaming PC" by Yolala1232:
+https://sketchfab.com/3d-models/custom-gaming-pc-1a24273417534f69afa0f7c62b643ffc
+https://sketchfab.com/Yolala1232
+
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+Source repository:
+https://github.com/CoolZero21/pc-configurator
+
+Changes: the chassis, motherboard, CPU-labeled AIO group, GPU, storage drive, PSU, and two RAM modules were extracted into separate files; geometry and textures were optimized for this project. The source has no standalone CPU-package or case-fan mesh; the builder uses separate generated CPU and fan geometry unless an assigned CPU model is available.

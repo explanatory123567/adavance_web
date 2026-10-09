@@ -33,6 +33,14 @@
   color: var(--text-muted);
   font-size: 10px;
 }
+.discord-profile-link {
+  align-items: flex-start;
+  gap: 6px;
+}
+.discord-profile-status {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
 .address-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -347,4 +355,56 @@
   accent-color: var(--neon-cyan);
   width: 18px;
   height: 18px;
+}
+
+.profile-notifications__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-notifications__heading h3 {
+  margin-bottom: 0;
+}
+
+.profile-notifications__heading button {
+  color: var(--neon-cyan);
+  font-size: 12px;
+}
+
+.profile-notifications__heading button:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.profile-notification {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(0, 240, 255, 0.05);
+  text-align: left;
+}
+
+.profile-notification.is-read {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.profile-notification strong {
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.profile-notification span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.profile-notification time,
+.profile-notifications__empty {
+  color: var(--text-muted);
+  font-size: 11px;
 }

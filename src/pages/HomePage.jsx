@@ -23,10 +23,52 @@ export default function HomePage() {
     products,
     builderConfig,
     models3d,
+    authUser,
+    orders,
     setCurrentPage,
     setSelectedCategoryFilter,
   } = useApp();
+  const hasClaimedFlashDeal = Boolean(
+    authUser?.email &&
+      orders.some(
+        (order) =>
+          order.email?.toLowerCase() === authUser.email.toLowerCase() &&
+          order.promoCode?.toUpperCase() === "CYBER2026",
+      ),
+  );
+  const builderParts = Object.values(builderConfig).filter(Boolean);
+  const selectedBuildParts = Object.entries(builderConfig).filter(
+    ([, part]) => Boolean(part),
+  );
+  const builderTotal = builderParts.reduce(
+    (total, part) => total + (Number(part.price) || 0),
+    0,
+  );
   const [activeTab, setActiveTab] = useState("bestsellers"); // 'bestsellers' | 'newarrivals' | 'popular'
+  useEffect(() => {
+    const sections = document.querySelectorAll(
+      ".home-page .storefront-reveal",
+    );
+    if (!("IntersectionObserver" in window)) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12 },
+    );
+
+    sections.forEach((section) => {
+      section.classList.add("reveal-ready");
+      observer.observe(section);
+    });
+    return () => observer.disconnect();
+  }, []);
 
   // Countdown timer for Flash Sale
   const [saleEndsAt, setSaleEndsAt] = useState(null);
@@ -172,25 +214,36 @@ export default function HomePage() {
 
                   {/* Hotspot Floating Spec Tags */}
                   <div className="inline-homepage-28">
-                    <span className="inline-homepage-29">Choose Your GPU</span>
-                  </div>
+                      <span className="inline-homepage-29">
+                        {builderConfig.gpu?.name || "Choose Your GPU"}
+                      </span>
+                    </div>
 
-                  <div className="inline-homepage-30">
-                    <span className="inline-homepage-31">
-                      Pick Your CPU
-                    </span>
-                  </div>
+                    <div className="inline-homepage-30">
+                      <span className="inline-homepage-31">
+                        {builderConfig.cpu?.name || "Pick Your CPU"}
+                      </span>
+                    </div>
                 </div>
 
                 {/* Card Bottom Specs */}
                 <div className="inline-homepage-32">
                   <div className="flex-between inline-homepage-33">
                     <h3 className="inline-homepage-34">Build Your Dream Rig</h3>
-                    <div className="inline-homepage-35">From ₱3,999</div>
+                    <div className="inline-homepage-35">
+                      {builderParts.length
+                        ? formatCurrency(builderTotal, 0)
+                        : "Start your build"}
+                    </div>
                   </div>
                   <div className="inline-homepage-36">
-                    <span>Custom CPU</span> • <span>Custom GPU</span> •{" "}
-                    <span>Custom Cooling</span>
+                    {selectedBuildParts.length
+                      ? selectedBuildParts.map(([slot, part]) => (
+                          <span key={slot} title={part.name}>
+                            {slot.toUpperCase()}: {part.name}
+                          </span>
+                        ))
+                      : "Choose parts in the 3D Builder"}
                   </div>
 
                   <button
@@ -207,9 +260,10 @@ export default function HomePage() {
       </section>
 
       {/* ==================== FLASH PROMOTIONS BANNER ==================== */}
-      <section className="inline-homepage-38">
-        <div className="container-wide">
-          <div className="inline-homepage-39">
+      {!hasClaimedFlashDeal && (
+        <section className="inline-homepage-38 storefront-reveal">
+          <div className="container-wide">
+            <div className="inline-homepage-39">
             <div className="inline-homepage-40">
               <div className="inline-homepage-41">
                 <Flame size={28} />
@@ -268,12 +322,13 @@ export default function HomePage() {
                 Claim Deal
               </button>
             </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ==================== FEATURED PRE-BUILT GAMING PCS ==================== */}
-      <section className="inline-homepage-60">
+      <section className="inline-homepage-60 storefront-reveal">
         <div className="container-wide">
           <div className="flex-between inline-homepage-61">
             <div>
@@ -301,7 +356,7 @@ export default function HomePage() {
       </section>
 
       {/* ==================== POPULAR CPUS & GPUS SHOWCASE ==================== */}
-      <section className="inline-homepage-64">
+      <section className="inline-homepage-64 storefront-reveal">
         <div className="container-wide">
           <div className="inline-homepage-65">
             <span className="badge badge-purple inline-homepage-66">
@@ -390,7 +445,7 @@ export default function HomePage() {
       </section>
 
       {/* ==================== FEATURED COMPONENTS & MARKETPLACE ==================== */}
-      <section className="inline-homepage-84">
+      <section className="inline-homepage-84 storefront-reveal">
         <div className="container-wide">
           <div className="flex-between inline-homepage-85">
             <div>
@@ -454,7 +509,7 @@ export default function HomePage() {
       </section>
 
       {/* ==================== 3D BUILDER CTA BANNER ==================== */}
-      <section className="inline-homepage-89">
+      <section className="inline-homepage-89 storefront-reveal">
         <div className="container-wide">
           <div className="inline-homepage-90">
             {/* Background cyber grid */}

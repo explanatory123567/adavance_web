@@ -15,6 +15,8 @@ import {
   Wrench,
   ChevronDown,
   ExternalLink,
+  Bell,
+  CheckCheck,
 } from "lucide-react";
 export default function Navbar() {
   const {
@@ -23,6 +25,7 @@ export default function Navbar() {
     setUserRole,
     currentPage,
     setCurrentPage,
+    setAdminTab,
     cart,
     wishlist,
     setAuthModalOpen,
@@ -30,10 +33,15 @@ export default function Navbar() {
     searchQuery,
     setSearchQuery,
     logout,
+    notifications,
+    markNotificationRead,
+    markAllNotificationsRead,
   } = useApp();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
   const wishlistCount = wishlist.length;
+  const unreadNotifications = notifications.filter((item) => !item.isRead).length;
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (currentPage !== "components") {
@@ -174,6 +182,70 @@ export default function Navbar() {
 
         {/* Action Controls & Authentication Area */}
         <div className="inline-navbar-20">
+          {userRole !== "guest" && (
+            <div className="navbar-notifications">
+              <button
+                type="button"
+                className="btn-icon navbar-notifications__trigger"
+                title="Notifications"
+                aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ""}`}
+                aria-expanded={notificationsOpen}
+                onClick={() => setNotificationsOpen((open) => !open)}
+              >
+                <Bell size={18} />
+                {unreadNotifications > 0 && (
+                  <span className="navbar-notifications__count">
+                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                  </span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className="navbar-notifications__dropdown" role="dialog" aria-label="Notifications">
+                  <div className="navbar-notifications__header">
+                    <strong>Notifications</strong>
+                    <button
+                      type="button"
+                      onClick={markAllNotificationsRead}
+                      disabled={unreadNotifications === 0}
+                    >
+                      <CheckCheck size={14} /> Mark all read
+                    </button>
+                  </div>
+                  {notifications.length ? (
+                    <div className="navbar-notifications__list">
+                      {notifications.map((notification) => (
+                        <button
+                          type="button"
+                          key={notification.id}
+                          className={`navbar-notifications__item${notification.isRead ? " is-read" : ""}`}
+                          onClick={() => {
+                            markNotificationRead(notification.id);
+                            if (notification.tab) setAdminTab(notification.tab);
+                            setCurrentPage(notification.page || "home");
+                            setNotificationsOpen(false);
+                          }}
+                        >
+                          <span className="navbar-notifications__dot" />
+                          <span className="navbar-notifications__copy">
+                            <strong>{notification.title}</strong>
+                            <span>{notification.message}</span>
+                            <time>
+                              {notification.createdAt
+                                ? new Date(notification.createdAt).toLocaleString()
+                                : "Just now"}
+                            </time>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="navbar-notifications__empty">You’re all caught up.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {userRole === "admin" && currentPage === "storefront" && (
             <button
               onClick={() => setCurrentPage("admin")}

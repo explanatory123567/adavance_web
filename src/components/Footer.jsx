@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./Footer.css";
 import { useApp } from "../context/AppContext";
+import { dataApi } from "../services/api";
 import {
   Cpu,
   ShieldCheck,
@@ -13,17 +14,31 @@ import {
   MapPin,
 } from "lucide-react";
 export default function Footer() {
-  const { setCurrentPage, showToast } = useApp();
+  const {
+    setCurrentPage,
+    setAuthModalOpen,
+    setAuthModalMode,
+    showToast,
+  } = useApp();
   const [newsletterEmail, setNewsletterEmail] = useState("");
-  const handleNewsletter = (event) => {
+  const [newsletterSubmitting, setNewsletterSubmitting] = useState(false);
+  const handleNewsletter = async (event) => {
     event.preventDefault();
-    if (!newsletterEmail) return;
-    showToast(
-      "Subscription confirmed",
-      "Next Gear updates will be sent to your inbox.",
-      "success",
-    );
-    setNewsletterEmail("");
+    if (!newsletterEmail || newsletterSubmitting) return;
+    setNewsletterSubmitting(true);
+    try {
+      const result = await dataApi.subscribeNewsletter(newsletterEmail);
+      showToast(
+        result.alreadySubscribed ? "Already subscribed" : "Subscription saved",
+        result.message,
+        result.alreadySubscribed ? "info" : "success",
+      );
+      setNewsletterEmail("");
+    } catch (error) {
+      showToast("Subscription failed", error.message, "warning");
+    } finally {
+      setNewsletterSubmitting(false);
+    }
   };
   return (
     <footer className="inline-footer-0">
@@ -105,12 +120,35 @@ export default function Footer() {
             </p>
 
             <div className="inline-footer-27">
-              {["Instagram", "Facebook"].map((social) => (
-                <span key={social} className="inline-footer-28">
-                  {social}
-                </span>
-              ))}
+              <a
+                className="inline-footer-28"
+                href="https://www.instagram.com/nextgear211/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Visit Next Gear on Instagram (opens in a new tab)"
+              >
+                Instagram
+              </a>
+              <a
+                className="inline-footer-28"
+                href="https://www.facebook.com/profile.php?id=61578550658911"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Visit Next Gear on Facebook (opens in a new tab)"
+              >
+                Facebook
+              </a>
             </div>
+            <button
+              type="button"
+              className="inline-footer-28 footer-admin-login"
+              onClick={() => {
+                setAuthModalMode("login");
+                setAuthModalOpen(true);
+              }}
+            >
+              Admin Login
+            </button>
           </div>
 
           {/* Col 2: Navigation */}
@@ -221,7 +259,12 @@ export default function Footer() {
                 onChange={(event) => setNewsletterEmail(event.target.value)}
                 className="form-control inline-footer-38"
               />
-              <button className="btn btn-primary btn-sm" type="submit">
+              <button
+                className="btn btn-primary btn-sm"
+                type="submit"
+                disabled={newsletterSubmitting}
+                aria-label="Subscribe to email updates"
+              >
                 <ArrowRight size={14} />
               </button>
             </form>

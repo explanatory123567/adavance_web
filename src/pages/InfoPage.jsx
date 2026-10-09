@@ -47,7 +47,7 @@ const pageContent = {
   faq: {
     title: "Answers before assembly.",
     subtitle: "The short version of how Next Gear works.",
-    body: "Save builds and orders after signing in. Use the Builder to check compatibility. GCash orders require a payment reference; COD orders are collected on delivery.",
+    body: "Save builds and orders after signing in. Use the Builder to check compatibility. GCash orders use a manual transfer and remain pending until the payment reference is verified. Cash on Delivery orders are collected on delivery.",
     label: "FAQ / FIELD NOTES",
     cards: [
       [
@@ -63,7 +63,7 @@ const pageContent = {
       [
         "PAYMENT",
         "How do I pay?",
-        "Choose GCash with a receipt reference or Cash on Delivery.",
+        "Transfer using the displayed GCash number and provide the transaction reference. Payment is marked pending until verified.",
       ],
     ],
   },

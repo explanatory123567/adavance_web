@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import "./App.css";
 import Navbar from "./components/Navbar";
@@ -22,7 +22,45 @@ import ProfilePage from "./pages/ProfilePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import InfoPage from "./pages/InfoPage";
 function MainAppContent() {
-  const { currentPage, userRole } = useApp();
+  const {
+    currentPage,
+    userRole,
+    setCurrentPage,
+    refreshProfile,
+    showToast,
+  } = useApp();
+  useEffect(() => {
+    const currentUrl = new URL(window.location.href);
+    const discordStatus = currentUrl.searchParams.get("discord");
+    if (!discordStatus) return;
+
+    currentUrl.searchParams.delete("discord");
+    window.history.replaceState(
+      {},
+      document.title,
+      `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+    );
+    setCurrentPage("profile");
+
+    if (discordStatus === "connected") {
+      refreshProfile()
+        .then(() =>
+          showToast("Discord connected", "Your Discord account is linked.", "success"),
+        )
+        .catch((error) =>
+          showToast("Discord linked", error.message, "warning"),
+        );
+    } else if (discordStatus === "cancelled") {
+      showToast("Discord connection cancelled", "No account changes were made.", "info");
+    } else {
+      showToast(
+        "Discord connection failed",
+        "Please try connecting your account again.",
+        "warning",
+      );
+    }
+  }, [refreshProfile, setCurrentPage, showToast]);
+
   const renderActivePage = () => {
     if (currentPage === "admin" || (userRole === "admin" && currentPage !== "storefront")) {
       return <AdminDashboard />;

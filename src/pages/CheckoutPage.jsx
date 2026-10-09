@@ -2,9 +2,21 @@ import React, { useEffect, useState } from "react";
 import "./CheckoutPage.css";
 import { useApp } from "../context/AppContext";
 import { formatCurrency } from "../utils/currency";
+import { resolveCoupon } from "../utils/coupons";
 import { CheckCircle2, Lock, ArrowLeft, Package } from "lucide-react";
 export default function CheckoutPage() {
-  const { cart, placeOrder, setCurrentPage, authUser, addresses } = useApp();
+  const {
+    cart,
+    checkoutItemIds,
+    placeOrder,
+    setCurrentPage,
+    authUser,
+    addresses,
+    showToast,
+  } = useApp();
+  const selectedItems = cart.filter(
+    (item) => checkoutItemIds === null || checkoutItemIds.includes(item.id),
+  );
 
   // Form States
   const [customerName, setCustomerName] = useState(authUser?.name || "");
@@ -18,7 +30,11 @@ export default function CheckoutPage() {
   const [shippingMethod, setShippingMethod] = useState("express"); // 'ground' | 'express'
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   const [gcashReference, setGcashReference] = useState("");
-  const [promoCode] = useState(() => localStorage.getItem("nextgear_promo") || "");
+  const [promoCode, setPromoCode] = useState(
+    () => localStorage.getItem("nextgear_promo") || "",
+  );
+  const randomOffer = JSON.parse(localStorage.getItem("nextgear_random_offer") || "null");
+  const promotion = resolveCoupon(promoCode, randomOffer);
   const [completedOrder, setCompletedOrder] = useState(null);
 
   useEffect(() => {
@@ -47,28 +63,56 @@ export default function CheckoutPage() {
   };
 
   // Financial calculations
-  const subtotal = cart.reduce(
+  const subtotal = selectedItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
   const shipping = shippingMethod === "express" ? 0 : 25;
-  const promoDiscount = promoCode === "CYBER2026" ? subtotal * 0.1 : 0;
+  const promoDiscount = promotion ? subtotal * promotion.discount : 0;
   const tax = (subtotal - promoDiscount) * 0.075;
   const total = subtotal - promoDiscount + shipping + tax;
   const handlePlaceOrderSubmit = async (e) => {
     e.preventDefault();
+    if (selectedItems.length === 0) return;
     const orderData = {
       name: customerName,
       email: customerEmail,
+      customerPhone,
+      shippingAddress: address,
+      city,
+      postalCode,
+      country,
+      shippingMethod,
+      shippingCost: shipping,
+      tax,
       total,
       paymentMethod,
       gcashReference,
-      promoCode,
+      promoCode: promotion?.code || "",
+      selectedCartItemIds: selectedItems.map((item) => item.id),
     };
-    const newOrder = await placeOrder(orderData);
-    if (newOrder) {
-      localStorage.removeItem("nextgear_promo");
-      setCompletedOrder(newOrder);
+    try {
+      const newOrder = await placeOrder(orderData);
+      if (newOrder) {
+        localStorage.removeItem("nextgear_promo");
+        setCompletedOrder(newOrder);
+      }
+    } catch (error) {
+      if (
+        promotion &&
+        error instanceof Error &&
+        error.message.includes("promotion has already been used")
+      ) {
+        localStorage.removeItem("nextgear_promo");
+        setPromoCode("");
+        showToast(
+          "Promotion already used",
+          "The coupon was removed. Review the updated total and place your order again.",
+          "warning",
+        );
+        return;
+      }
+      showToast("Order could not be saved", error.message, "error");
     }
   };
 
@@ -95,7 +139,10 @@ export default function CheckoutPage() {
               <strong className="inline-checkoutpage-7">
                 #{completedOrder.id}
               </strong>{" "}
-              has been transmitted to our cleanroom assembly laboratory.
+              {completedOrder.paymentMethod === "GCash" &&
+              completedOrder.paymentStatus !== "Paid"
+                ? "was submitted and is waiting for manual GCash payment verification."
+                : "has been transmitted to our cleanroom assembly laboratory."}
             </p>
 
             <div className="inline-checkoutpage-8">
@@ -119,6 +166,25 @@ export default function CheckoutPage() {
                   {formatCurrency(completedOrder.total)}
                 </span>
               </div>
+              {completedOrder.paymentMethod === "GCash" && (
+                <>
+                  <div className="flex-between">
+                    <span className="inline-checkoutpage-13">Payment Status:</span>
+                    <span className="inline-checkoutpage-14">
+                      {completedOrder.paymentStatus || "Pending verification"}
+                    </span>
+                  </div>
+                  <div className="flex-between">
+                    <span className="inline-checkoutpage-13">GCash Reference:</span>
+                    <span className="inline-checkoutpage-10">
+                      {completedOrder.gcashReference}
+                    </span>
+                  </div>
+                  <p className="gcash-verification-note">
+                    Payment is pending until the transfer is verified.
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="inline-checkoutpage-15">
@@ -135,6 +201,27 @@ export default function CheckoutPage() {
                 Return to Home
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedItems.length === 0) {
+    return (
+      <div className="checkout-page inline-checkoutpage-18">
+        <div className="container inline-checkoutpage-1">
+          <div className="cyber-card-static inline-checkoutpage-2">
+            <h2 className="inline-checkoutpage-5">No items selected</h2>
+            <p className="inline-checkoutpage-6">
+              Return to your cart and select the items you want to check out.
+            </p>
+            <button
+              onClick={() => setCurrentPage("cart")}
+              className="btn btn-primary"
+            >
+              Back to Cart
+            </button>
           </div>
         </div>
       </div>
@@ -412,28 +499,31 @@ export default function CheckoutPage() {
                 {paymentMethod === "GCash" ? (
                   <div className="inline-checkoutpage-52">
                     <div className="gcash-payment-panel">
-                      <strong>Pay via GCash</strong>
                       <span>
-                        Send the exact total to GCash account:{" "}
-                        <b>
-                          {process.env.REACT_APP_GCASH_NUMBER ||
-                            "Set REACT_APP_GCASH_NUMBER"}
-                        </b>
+                        Send <b>{formatCurrency(total)}</b> to this GCash
+                        account:
                       </span>
+                      <strong>
+                        {process.env.REACT_APP_GCASH_NUMBER ||
+                          "GCash recipient is not configured"}
+                      </strong>
                       <small>
-                        Enter the reference number from your GCash receipt.
+                        After sending the payment in GCash, enter the
+                        transaction/reference number below. Any non-empty
+                        value can submit the order; payment remains pending
+                        until an admin verifies the transfer.
                       </small>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">
-                        GCash Reference Number
-                      </label>
+                      <label className="form-label">GCash Transaction Reference</label>
                       <input
                         type="text"
+                        inputMode="numeric"
                         className="form-control"
                         value={gcashReference}
-                        onChange={(e) => setGcashReference(e.target.value)}
-                        placeholder="e.g. 123456789012"
+                        onChange={(event) => setGcashReference(event.target.value)}
+                        placeholder="Enter a reference number (e.g. 1234567890)"
+                        maxLength={80}
                         required
                       />
                     </div>
@@ -450,11 +540,11 @@ export default function CheckoutPage() {
             {/* Right: Order Pricing Breakdown */}
             <div className="cyber-card-static inline-checkoutpage-57">
               <h3 className="inline-checkoutpage-58">
-                Order Summary ({cart.length} items)
+                Order Summary ({selectedItems.length} items)
               </h3>
 
               <div className="inline-checkoutpage-59">
-                {cart.map((item) => (
+                {selectedItems.map((item) => (
                   <div
                     key={item.id}
                     className="flex-between inline-checkoutpage-60"
@@ -474,6 +564,14 @@ export default function CheckoutPage() {
                   <span className="inline-checkoutpage-64">Subtotal:</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
+                {promoDiscount > 0 && promotion && (
+                  <div className="flex-between">
+                    <span>
+                      {promotion.code} ({Math.round(promotion.discount * 100)}% off):
+                    </span>
+                    <span>-{formatCurrency(promoDiscount)}</span>
+                  </div>
+                )}
                 <div className="flex-between">
                   <span className="inline-checkoutpage-65">Shipping:</span>
                   <span
@@ -502,11 +600,16 @@ export default function CheckoutPage() {
                 type="submit"
                 className="btn btn-primary inline-checkoutpage-69"
               >
-                <Lock size={16} /> Place Order Now
+                <Lock size={16} />
+                {paymentMethod === "GCash"
+                  ? "Pay with GCash"
+                  : "Place COD Order"}
               </button>
 
               <div className="inline-checkoutpage-70">
-                Secure checkout with confirmation and order tracking.
+                {paymentMethod === "GCash"
+                  ? "Manual GCash transfer. Orders stay pending until payment is verified."
+                  : "Secure checkout with confirmation and order tracking."}
               </div>
             </div>
           </div>
